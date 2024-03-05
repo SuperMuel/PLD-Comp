@@ -24,4 +24,5 @@ jobs:
           make -C compiler
       - name: Run Tests
         run: |
+          chmod +x ./tests/ifcc-wrapper.sh
           python3 ./tests/ifcc-test.py ./tests/testfiles
