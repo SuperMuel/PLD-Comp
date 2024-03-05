@@ -1,6 +1,9 @@
 # Ignore all IDE settings for the moment.
 .idea
 
+# Do not commit test results
+ifcc-test-output
+
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,c++,clion,cmake,intellij
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,c++,clion,cmake,intellij
 

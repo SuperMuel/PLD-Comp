@@ -1,7 +1,9 @@
 generated
+build
 
 # Do not track user configurations
 compiler/*.mk
 
 # Do not track binary output
 /ifcc
+
