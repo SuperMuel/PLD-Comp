@@ -76,7 +76,7 @@ def get_c_files(path: str) -> List[str]:
                 inputfilenames.append(path)
             else:
                 print("error: incorrect filename suffix (should be '.c'): " + path)
-                exit(1)
+                sys.exit(1)
         elif os.path.isdir(path):
             for dirpath, dirnames, filenames in os.walk(path):
                 inputfilenames += [dirpath + '/' + name for name in filenames if name[-2:] == '.c']
@@ -111,7 +111,7 @@ def get_wrapper_path(args: argparse.Namespace) -> str:
 
     if not os.path.isfile(wrapper):
         print("error: cannot find " + os.path.basename(wrapper) + " in directory: " + os.path.dirname(wrapper))
-        exit(1)
+        sys.exit(1)
 
     return wrapper
 
@@ -167,7 +167,7 @@ def prepare_test_cases(input_filenames: list, output_dir: str, debug: bool) -> l
     return unique_jobs
 
 
-def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> None:
+def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bool:
     os.chdir(orig_cwd)
 
     print('TEST-CASE: ' + jobname)
@@ -189,17 +189,17 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> No
     if gccstatus != 0 and ifccstatus != 0:
         ## ifcc correctly rejects invalid program -> test-case ok
         print("TEST OK")
-        return
+        return True
     if gccstatus != 0 and ifccstatus == 0:
         ## ifcc wrongly accepts invalid program -> error
         print("TEST FAIL (your compiler accepts an invalid program)")
-        return
+        return False
     if gccstatus == 0 and ifccstatus != 0:
         ## ifcc wrongly rejects valid program -> error
         print("TEST FAIL (your compiler rejects a valid program)")
         if args.verbose:
             dumpfile("ifcc-compile.txt")
-        return
+        return False
 
     ## ifcc accepts to compile valid program -> let's link it
     ldstatus = command("gcc -o exe-ifcc asm-ifcc.s", "ifcc-link.txt")
@@ -207,7 +207,7 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> No
         print("TEST FAIL (your compiler produces incorrect assembly)")
         if args.verbose:
             dumpfile("ifcc-link.txt")
-        return
+        return False
 
     ## both compilers  did produce an  executable, so now we  run both
     ## these executables and compare the results.
@@ -220,10 +220,11 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> No
             dumpfile("gcc-execute.txt")
             print("you:")
             dumpfile("ifcc-execute.txt")
-        return
+        return False
 
     ## last but not least
     print("TEST OK")
+    return True
 
 
 if __name__ == "__main__":
@@ -238,7 +239,7 @@ if __name__ == "__main__":
 
     if IFCC_TEST_OUTPUT in orig_cwd:
         print('error: cannot run from within the output directory')
-        exit(1)
+        sys.exit(1)
 
     if os.path.isdir(IFCC_TEST_OUTPUT):
         # cleanup previous output directory
@@ -273,5 +274,12 @@ if __name__ == "__main__":
 
     jobs = prepare_test_cases(inputfilenames, IFCC_TEST_OUTPUT, args.debug)
 
-    for jobname in jobs:
-        run_test_case(jobname, orig_cwd, wrapper, args.verbose)
+    test_results = [run_test_case(job, orig_cwd, wrapper, args.verbose) for job in jobs]
+
+    # If any test fails (False in test_results), exit with status code 1. Otherwise, exit with 0.
+    if not all(test_results):
+        print("Some tests failed.")
+        sys.exit(1)
+    else:
+        print("All tests passed.")
+        sys.exit(0)
