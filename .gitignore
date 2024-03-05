@@ -1,3 +1,6 @@
+# Ignore all IDE settings for the moment.
+.idea
+
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,c++,clion,cmake,intellij
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,c++,clion,cmake,intellij
 
