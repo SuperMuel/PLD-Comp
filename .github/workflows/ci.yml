@@ -1,0 +1,24 @@
+name: C++ CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout repo
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install antlr4 libantlr4-runtime-dev default-jdk
+
+      - name: Set up Compiler Configuration
+        run: |
+          cp ./compiler/example_configs/ubuntu.mk ./compiler/config.mk
+
+      - name: Compile the Compiler
+        run: |
+          make -C compiler
