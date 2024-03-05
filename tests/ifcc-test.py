@@ -15,11 +15,10 @@
 #
 
 import argparse
-import glob
 import os
 import shutil
-import sys
 import subprocess
+import sys
 from typing import List
 
 
