@@ -146,7 +146,6 @@ antlrcpp::Any CodeGenVisitor::visitId(ifccParser::IdContext *ctx) {
   }
 
   freeRegister++;
-
   return 0;
 }
 
@@ -155,11 +154,11 @@ CodeGenVisitor::visitReturn_stmt(ifccParser::Return_stmtContext *ctx) {
   visitChildren(ctx);
 
   assembly << "movl %" << registers[0] << ", %eax" << std::endl;
-
   assembly << "popq %rbp\n";
   assembly << "ret\n";
 
   return 0;
+<<<<<<< HEAD
 }
 
 bool CodeGenVisitor::addSymbol(antlr4::ParserRuleContext *ctx,
