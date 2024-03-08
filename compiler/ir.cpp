@@ -157,6 +157,7 @@ void CFG::gen_asm(std::ostream &o) {
   current_bb->gen_asm(o);
   gen_asm_epilogue(o);
 }
+
 void CFG::gen_asm_epilogue(std::ostream &o) {
   // TODO
 }
