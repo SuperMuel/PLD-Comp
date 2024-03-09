@@ -9,9 +9,9 @@ stmt : var_decl_stmt
      | return_stmt;
 
 var_decl_stmt : TYPE ID ';' ;
-var_assign_stmt: ID '=' (CONST | ID) ';' ;
+var_assign_stmt: ID '=' (INTEGER | ID) ';' ;
 
-return_stmt: RETURN CONST ';' ;
+return_stmt: RETURN INTEGER ';' ;
 
 RETURN : 'return' ;
 TYPE : 'int' ;
@@ -47,9 +47,9 @@ UNSIGNED : 'unsigned' ;
 VOID : 'void' ;
 VOLATILE : 'volatile' ;
 WHILE : 'while' ;
+CONST : 'const' ;
 
-
-CONST : [0-9]+ ;
+INTEGER : [0-9]+ ;
 COMMENT : '/*' .*? '*/' -> skip ;
 DIRECTIVE : '#' .*? '\n' -> skip ;
 WS    : [ \t\r\n] -> channel(HIDDEN);
