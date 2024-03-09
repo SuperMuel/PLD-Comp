@@ -22,6 +22,13 @@ import sys
 from typing import List
 
 
+def print_green(text):
+    print("\033[92m" + text + "\033[0m")
+
+def print_red(text):
+    print("\033[91m" + text + "\033[0m")
+
+
 def command(string, logfile=None):
     """execute `string` as a shell command, optionnaly logging stdout+stderr to a file. return exit status.)"""
     if args.verbose:
@@ -74,13 +81,13 @@ def get_c_files(path: str) -> List[str]:
             if path[-2:] == '.c':
                 inputfilenames.append(path)
             else:
-                print("error: incorrect filename suffix (should be '.c'): " + path)
+                print_red("error: incorrect filename suffix (should be '.c'): " + path)
                 sys.exit(1)
         elif os.path.isdir(path):
             for dirpath, dirnames, filenames in os.walk(path):
                 inputfilenames += [dirpath + '/' + name for name in filenames if name[-2:] == '.c']
         else:
-            print("error: cannot read input path `" + path + "'")
+            print_red("error: cannot read input path `" + path + "'")
             sys.exit(1)
 
     return inputfilenames
@@ -93,10 +100,10 @@ def check_files_can_be_read(files: List[str]) -> None:
             with open(file, "r") as f:
                 pass  # We don't need to do anything with the file, just check that it can be opened
         except OSError as e:
-            print(f"error: Unable to read file {file}: {e.strerror}")
+            print_red(f"error: Unable to read file {file}: {e.strerror}")
             sys.exit(1)
         except Exception as e:
-            print(f"error: Unable to read file {file}: {e}")
+            print_red(f"error: Unable to read file {file}: {e}")
             sys.exit(1)
 
 
@@ -109,7 +116,7 @@ def get_wrapper_path(args: argparse.Namespace) -> str:
             os.path.realpath(__file__)) + "/ifcc-wrapper.sh"  # TODO: set this directily in the argparse default
 
     if not os.path.isfile(wrapper):
-        print("error: cannot find " + os.path.basename(wrapper) + " in directory: " + os.path.dirname(wrapper))
+        print_red("error: cannot find " + os.path.basename(wrapper) + " in directory: " + os.path.dirname(wrapper))
         sys.exit(1)
 
     return wrapper
@@ -118,7 +125,7 @@ def get_wrapper_path(args: argparse.Namespace) -> str:
 def check_wrapper_can_be_executed(wrapper: str) -> None:
     """check that the wrapper script can be executed"""
     if not os.access(wrapper, os.X_OK):
-        print(f"error: {wrapper} is not executable")
+        print_red(f"error: {wrapper} is not executable")
         sys.exit(1)
 
 
@@ -146,7 +153,7 @@ def prepare_test_cases(input_filenames: list, output_dir: str, debug: bool) -> l
             print(f"debug: PREPARING {inputfilename}")
 
         if output_dir in os.path.realpath(inputfilename):
-            print(f'error: input filename is within output directory: {inputfilename}')
+            print_red(f'error: input filename is within output directory: {inputfilename}')
             sys.exit(1)
 
         # Create a subdirectory for each test case
@@ -187,15 +194,15 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bo
 
     if gccstatus != 0 and ifccstatus != 0:
         ## ifcc correctly rejects invalid program -> test-case ok
-        print("TEST OK")
+        print_green("TEST OK")
         return True
     if gccstatus != 0 and ifccstatus == 0:
         ## ifcc wrongly accepts invalid program -> error
-        print("TEST FAIL (your compiler accepts an invalid program)")
+        print_red("TEST FAIL (your compiler accepts an invalid program)")
         return False
     if gccstatus == 0 and ifccstatus != 0:
         ## ifcc wrongly rejects valid program -> error
-        print("TEST FAIL (your compiler rejects a valid program)")
+        print_red("TEST FAIL (your compiler rejects a valid program)")
         if args.verbose:
             dumpfile("ifcc-compile.txt")
         return False
@@ -203,7 +210,7 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bo
     ## ifcc accepts to compile valid program -> let's link it
     ldstatus = command("gcc -o exe-ifcc asm-ifcc.s", "ifcc-link.txt")
     if ldstatus != 0:
-        print("TEST FAIL (your compiler produces incorrect assembly)")
+        print_red("TEST FAIL (your compiler produces incorrect assembly)")
         if args.verbose:
             dumpfile("ifcc-link.txt")
         return False
@@ -222,7 +229,7 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bo
         return False
 
     ## last but not least
-    print("TEST OK")
+    print_green("TEST OK")
     return True
 
 
@@ -237,7 +244,7 @@ if __name__ == "__main__":
     IFCC_TEST_OUTPUT = 'ifcc-test-output'
 
     if IFCC_TEST_OUTPUT in orig_cwd:
-        print('error: cannot run from within the output directory')
+        print_red('error: cannot run from within the output directory')
         sys.exit(1)
 
     if os.path.isdir(IFCC_TEST_OUTPUT):
@@ -254,7 +261,7 @@ if __name__ == "__main__":
 
     ## sanity check
     if not inputfilenames:
-        print("error: found no test-case in: " + " ".join(args.input))
+        print_red("error: found no test-case in: " + " ".join(args.input))
         sys.exit(1)
 
     ## Here we check that  we can actually read the files.  Our goal is to
@@ -277,8 +284,8 @@ if __name__ == "__main__":
 
     # If any test fails (False in test_results), exit with status code 1. Otherwise, exit with 0.
     if not all(test_results):
-        print("Some tests failed.")
+        print_red("Some tests failed.")
         sys.exit(1)
     else:
-        print("All tests passed.")
+        print_green("All tests passed.")
         sys.exit(0)
