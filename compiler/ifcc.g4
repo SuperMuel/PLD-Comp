@@ -13,29 +13,33 @@ var_assign_stmt: ID '=' (INTEGER | ID) ';' ;
 
 return_stmt: RETURN INTEGER ';' ;
 
-RETURN : 'return' ;
 TYPE : 'int' ;
 
+// Types
+CHAR : 'char' ;
+DOUBLE : 'double' ;
+LONG : 'long' ;
+VOID : 'void' ;
+SHORT : 'short' ;
+FLOAT : 'float' ;
+
+
 // Keywords
+RETURN : 'return' ;
 BREAK : 'break' ;
 CASE : 'case' ;
-CHAR : 'char' ;
 CONTINUE : 'continue' ;
 DEFAULT : 'default' ;
 DO : 'do' ;
-DOUBLE : 'double' ;
 ELSE : 'else' ;
 ENUM : 'enum' ;
 EXTERN : 'extern' ;
-FLOAT : 'float' ;
 FOR : 'for' ;
 GOTO : 'goto' ;
 IF : 'if' ;
 INLINE : 'inline' ;
-LONG : 'long' ;
 REGISTER : 'register' ;
 RESTRICT : 'restrict' ;
-SHORT : 'short' ;
 SIGNED : 'signed' ;
 SIZEOF : 'sizeof' ;
 STATIC : 'static' ;
@@ -44,7 +48,6 @@ SWITCH : 'switch' ;
 TYPEDEF : 'typedef' ;
 UNION : 'union' ;
 UNSIGNED : 'unsigned' ;
-VOID : 'void' ;
 VOLATILE : 'volatile' ;
 WHILE : 'while' ;
 CONST : 'const' ;
