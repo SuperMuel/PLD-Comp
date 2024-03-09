@@ -15,8 +15,42 @@ return_stmt: RETURN CONST ';' ;
 
 RETURN : 'return' ;
 TYPE : 'int' ;
+
+// Keywords
+BREAK : 'break' ;
+CASE : 'case' ;
+CHAR : 'char' ;
+CONTINUE : 'continue' ;
+DEFAULT : 'default' ;
+DO : 'do' ;
+DOUBLE : 'double' ;
+ELSE : 'else' ;
+ENUM : 'enum' ;
+EXTERN : 'extern' ;
+FLOAT : 'float' ;
+FOR : 'for' ;
+GOTO : 'goto' ;
+IF : 'if' ;
+INLINE : 'inline' ;
+LONG : 'long' ;
+REGISTER : 'register' ;
+RESTRICT : 'restrict' ;
+SHORT : 'short' ;
+SIGNED : 'signed' ;
+SIZEOF : 'sizeof' ;
+STATIC : 'static' ;
+STRUCT : 'struct' ;
+SWITCH : 'switch' ;
+TYPEDEF : 'typedef' ;
+UNION : 'union' ;
+UNSIGNED : 'unsigned' ;
+VOID : 'void' ;
+VOLATILE : 'volatile' ;
+WHILE : 'while' ;
+
+
 CONST : [0-9]+ ;
 COMMENT : '/*' .*? '*/' -> skip ;
 DIRECTIVE : '#' .*? '\n' -> skip ;
 WS    : [ \t\r\n] -> channel(HIDDEN);
-ID : [a-zA-Z_][a-zA-Z_1-9]* ;
+ID : [a-zA-Z_][a-zA-Z_0-9]* ;
