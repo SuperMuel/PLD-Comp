@@ -64,8 +64,8 @@ CodeGenVisitor::visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) {
   Symbol &symbol1 = symbolTable[ctx->ID(0)->toString()];
   symbol1.used = true;
 
-  if (ctx->INTEGER() != nullptr) {
-    assembly << "movl $" << ctx->INTEGER()->toString() << ", -" << symbol1.offset
+  if (ctx->INTEGER_LITERAL() != nullptr) {
+    assembly << "movl $" << ctx->INTEGER_LITERAL()->toString() << ", -" << symbol1.offset
              << "(%rbp)" << std::endl;
     return 0;
   }
@@ -89,7 +89,7 @@ CodeGenVisitor::visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) {
 
 antlrcpp::Any
 CodeGenVisitor::visitReturn_stmt(ifccParser::Return_stmtContext *ctx) {
-  int retval = stoi(ctx->INTEGER()->getText());
+  int retval = stoi(ctx->INTEGER_LITERAL()->getText());
 
   assembly << "    movl $" << retval << ", %eax\n";
 
