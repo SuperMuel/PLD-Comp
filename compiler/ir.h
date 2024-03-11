@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "Symbol.h"
 #include "Type.h"
 
 class BasicBlock;
@@ -14,6 +15,8 @@ class IRInstr {
 public:
   /** The instructions themselves -- feel free to subclass instead */
   typedef enum {
+    const_assign,
+    var_assign,
     ldconst,
     copy,
     add,
@@ -32,7 +35,7 @@ public:
   IRInstr(BasicBlock *bb_, Operation op, Type t,
           const std::vector<std::string> &params);
 
-  void genAsm(std::ostream &os);
+  void genAsm(std::ostream &os, std::map<std::string, Symbol> &symbolTable);
 
   friend std::ostream &operator<<(std::ostream &os, IRInstr &instruction);
 
@@ -46,8 +49,10 @@ private:
 class BasicBlock {
 public:
   BasicBlock(CFG *cfg, std::string entry_label);
-  void gen_asm(std::ostream &o); /**< x86 assembly code generation for this
-                               basic block (very simple) */
+  void gen_asm(std::ostream &o,
+               std::map<std::string, Symbol>
+                   &symbolTable); /**< x86 assembly code generation for this
+                                     basic block (very simple) */
 
   void add_IRInstr(IRInstr::Operation op, Type t,
                    const std::vector<std::string> &params);
@@ -70,6 +75,7 @@ public:
 
 class CFG {
 public:
+  ~CFG();
   // CFG(DefFonction *ast);
 
   // DefFonction *ast; /**< The AST this CFG comes from */
@@ -82,11 +88,12 @@ public:
       std::string reg); /**< helper method: inputs a IR reg or input variable,
                       returns e.g. "-24(%rbp)" for the proper value of 24 */
   void gen_asm_prologue(std::ostream &o);
+  void gen_asm(std::ostream &o);
   void gen_asm_epilogue(std::ostream &o);
 
   // symbol table methods
-  void add_to_symbol_table(std::string name, Type t);
-  std::string create_new_tempvar(Type t);
+  void add_to_symbol_table(std::string name, Type t, int line);
+  std::string create_new_tempvar(Type t, int line);
   int get_var_index(std::string name);
   Type get_var_type(std::string name);
 
@@ -94,9 +101,9 @@ public:
   std::string new_BB_name();
   BasicBlock *current_bb;
 
+  // Make it protected
+  std::map<std::string, Symbol> symbolTable; /**< part of the symbol table  */
 protected:
-  std::map<std::string, Type> SymbolType; /**< part of the symbol table  */
-  std::map<std::string, int> SymbolIndex; /**< part of the symbol table  */
   int nextFreeSymbolIndex; /**< to allocate new symbols in the symbol table */
   int nextBBnumber;        /**< just for naming */
 

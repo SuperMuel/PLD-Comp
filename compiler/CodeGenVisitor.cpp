@@ -1,5 +1,7 @@
 #include "CodeGenVisitor.h"
+#include "Type.h"
 #include "VisitorErrorListener.h"
+#include "ir.h"
 #include "support/Any.h"
 
 using namespace std;
@@ -12,12 +14,17 @@ CodeGenVisitor::~CodeGenVisitor() {
   }
 }
 
+CodeGenVisitor::CodeGenVisitor() : freeRegister(0) {
+  BasicBlock *basicBlock = new BasicBlock(&cfg, "main");
+  cfg.add_bb(basicBlock);
+}
+
 antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
-  assembly << ".globl main\n";
+  /*assembly << ".globl main\n";
   assembly << " main: \n";
 
   assembly << "pushq %rbp\n";
-  assembly << "movq %rsp, %rbp\n";
+  assembly << "movq %rsp, %rbp\n";*/
 
   for (ifccParser::StmtContext *stmt : ctx->stmt()) {
     this->visit(stmt);
@@ -25,8 +32,8 @@ antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
 
   this->visit(ctx->return_stmt());
 
-  for (auto it = symbolTable.begin(); it != symbolTable.end(); it++) {
-    if (!it->second->used) {
+  for (auto it = cfg.symbolTable.begin(); it != cfg.symbolTable.end(); it++) {
+    if (!it->second.used) {
       errorListener.addError("Variable " + it->first +
                                  " not used (declared in line " +
                                  to_string(it->second->line) + ")",
@@ -46,7 +53,6 @@ antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
 antlrcpp::Any
 CodeGenVisitor::visitVar_decl_stmt(ifccParser::Var_decl_stmtContext *ctx) {
   addSymbol(ctx, ctx->ID()->toString());
-
   return 0;
 }
 
@@ -151,6 +157,7 @@ antlrcpp::Any CodeGenVisitor::visitId(ifccParser::IdContext *ctx) {
 
 antlrcpp::Any
 CodeGenVisitor::visitReturn_stmt(ifccParser::Return_stmtContext *ctx) {
+<<<<<<< HEAD
   visitChildren(ctx);
 
   assembly << "movl %" << registers[0] << ", %eax" << std::endl;
@@ -158,7 +165,6 @@ CodeGenVisitor::visitReturn_stmt(ifccParser::Return_stmtContext *ctx) {
   assembly << "ret\n";
 
   return 0;
-<<<<<<< HEAD
 }
 
 bool CodeGenVisitor::addSymbol(antlr4::ParserRuleContext *ctx,
@@ -189,3 +195,5 @@ Symbol *CodeGenVisitor::getSymbol(antlr4::ParserRuleContext *ctx,
   it->second->used = true;
   return it->second;
 }
+
+CFG *CodeGenVisitor::getCfg() { return &cfg; }
