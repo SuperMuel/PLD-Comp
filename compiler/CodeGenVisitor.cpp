@@ -71,7 +71,6 @@ CodeGenVisitor::visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) {
 
 antlrcpp::Any
 CodeGenVisitor::visitReturn_stmt(ifccParser::Return_stmtContext *ctx) {
-
   std::string val = visit(ctx->expr()).as<std::string>();
   cfg.current_bb->add_IRInstr(IRInstr::ret, Type::INT, {val}, &cfg);
 

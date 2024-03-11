@@ -49,7 +49,6 @@ public:
   void gen_asm(std::ostream &
                    o); /**< x86 assembly code generation for this
                                                     basic block (very simple) */
-
   std::string add_IRInstr(IRInstr::Operation op, Type t,
                           std::vector<std::string> params, CFG *cfg);
 
