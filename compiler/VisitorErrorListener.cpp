@@ -26,10 +26,10 @@ void VisitorErrorListener::addError(antlr4::ParserRuleContext *ctx,
 
 void VisitorErrorListener::addError(const std::string &message,
                                     ErrorType errorType) {
-  mHasError = true;
   switch (errorType) {
   case ErrorType::Error:
     cerr << "Error: ";
+    mHasError = true;
     break;
   case ErrorType::Warning:
     cerr << "Warning: ";
