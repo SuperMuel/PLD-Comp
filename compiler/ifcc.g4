@@ -18,6 +18,9 @@ expr : '(' expr ')' #par
      | expr op=('+' | '-') expr #addsub
      | expr op=('<' | '<=' | '>' | '>=') expr #cmp
      | expr op=('==' | '!=') expr #eq
+     | expr '&' expr #b_and
+     | expr '^' expr #b_xor
+     | expr '|' expr #b_or
      | (INTEGER_LITERAL | ID) #val
      ;
 

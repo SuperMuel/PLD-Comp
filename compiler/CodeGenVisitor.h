@@ -39,6 +39,13 @@ public:
 
   inline CFG *const getCfg() { return &cfg; };
 
+  virtual antlrcpp::Any visitBitwise_and(ifccParser::Bitwise_andContext *ctx) override;
+
+  virtual antlrcpp::Any visitBitwise_or(ifccParser::Bitwise_orContext *ctx) override;
+
+  virtual antlrcpp::Any visitBitwise_xor(ifccParser::Bitwise_xorContext *ctx) override;
+
+
 private:
   VisitorErrorListener errorListener;
   // Keeps track of the label for the next jump

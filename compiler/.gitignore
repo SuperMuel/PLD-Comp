@@ -1,6 +1,9 @@
 generated
 build
 
+.DS_Store
+.antlr
+
 # Do not track user configurations
 *.mk
 

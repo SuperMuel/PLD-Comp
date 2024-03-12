@@ -209,3 +209,48 @@ Symbol *CodeGenVisitor::getSymbol(antlr4::ParserRuleContext *ctx,
   it->second->used = true;
   return it->second;
 }
+
+antlrcpp::Any
+CodeGenVisitor::visitBitwise_and(ifccParser::Bitwise_andContext *ctx) {
+  visit(ctx->expr());
+  visit(ctx->term());
+
+  freeRegister -= 2;
+
+  assembly << "andl %" << registers[freeRegister + 1] << ", %"
+           << registers[freeRegister] << std::endl;
+
+  freeRegister++;
+
+  return 0;
+}
+
+antlrcpp::Any
+CodeGenVisitor::visitBitwise_or(ifccParser::Bitwise_orContext *ctx) {
+  visit(ctx->expr());
+  visit(ctx->term());
+
+  freeRegister -= 2;
+
+  assembly << "orl %" << registers[freeRegister + 1] << ", %"
+           << registers[freeRegister] << std::endl;
+
+  freeRegister++;
+
+  return 0;
+}
+
+antlrcpp::Any
+CodeGenVisitor::visitBitwise_xor(ifccParser::Bitwise_xorContext *ctx) {
+  visit(ctx->expr());
+  visit(ctx->term());
+
+  freeRegister -= 2;
+
+  assembly << "xorl %" << registers[freeRegister + 1] << ", %"
+           << registers[freeRegister] << std::endl;
+
+  freeRegister++;
+
+  return 0;
+}
