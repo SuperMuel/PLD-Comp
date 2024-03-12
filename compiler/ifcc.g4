@@ -3,11 +3,10 @@ grammar ifcc;
 axiom : prog EOF ;
 
 prog : 'int' 'main' '(' ')' '{' stmt* return_stmt '}' ;
+
 stmt : var_decl_stmt
      | var_assign_stmt
      | return_stmt;
-
-//prog: CONST |  prog '+' CONST;
 
 var_decl_stmt : TYPE ID ';' ;
 var_assign_stmt: ID '=' expr ';' ;
@@ -65,4 +64,3 @@ COMMENT : '/*' .*? '*/' -> skip ;
 DIRECTIVE : '#' .*? '\n' -> skip ;
 WS    : [ \t\r\n] -> channel(HIDDEN);
 ID : [a-zA-Z_][a-zA-Z_0-9]* ;
-
