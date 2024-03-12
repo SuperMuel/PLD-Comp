@@ -19,126 +19,144 @@ import os
 import shutil
 import subprocess
 import sys
-from typing import List
+from pathlib import Path
+from typing import List, Optional
 
+
+debug = True # TODO : replace with logging
 
 def print_green(text):
     print("\033[92m" + text + "\033[0m")
+
+
 
 def print_red(text):
     print("\033[91m" + text + "\033[0m")
 
 
-def command(string, logfile=None):
-    """execute `string` as a shell command, optionnaly logging stdout+stderr to a file. return exit status.)"""
-    if args.verbose:
-        print("ifcc-test.py: " + string)
+def print_error_and_exit(text):
+    print_red(text)
+    sys.exit(1)
+
+
+def execute_command(cmd: str, verbose=0) -> (int, str):
+    """Execute a shell command and return the exit status and the output."""
+    if verbose:
+        print(f"debug: execute_command: {cmd}")
     try:
-        output = subprocess.check_output(string, stderr=subprocess.STDOUT, shell=True)
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
         ret = 0
     except subprocess.CalledProcessError as e:
         ret = e.returncode
         output = e.output
+    return ret, output.decode(sys.stdout.encoding)
+
+def command(cmd: str, logfile=Optional[str]) -> int:
+    """execute `string` as a shell command, optionally logging stdout+stderr to a file. return exit status.)"""
+
+    return_code, output = execute_command(cmd, verbose=args.verbose)
 
     if logfile:
         with open(logfile, 'w') as f:
-            print(output.decode(sys.stdout.encoding) + '\n' + 'exit status: ' + str(ret), file=f)
+            print(output + '\n' + 'exit status: ' + str(return_code), file=f)
 
-    return ret
+    return return_code
 
 
-def dumpfile(name):
-    """print the content of a file to stdout"""
-    with open(name) as f:
-        print(f.read(), end='')
+def print_file(file: Path) -> None:
+    """Prints the contents of a file to stdout."""
+    if not file.exists():
+        print_error_and_exit(f"File {file} does not exist")
+    if not file.is_file():
+        print_error_and_exit(f"Path {file} is not a file")
+    with open(file) as f:
+        print(f.read(), end='')  # ! Why end=''?
 
 
 def parse_args() -> argparse.Namespace:
-    argparser = argparse.ArgumentParser(
+    """Parse command-line arguments."""
+
+    parser = argparse.ArgumentParser(
         description="Compile multiple programs with both GCC and IFCC, run them, and compare the results.",
         epilog=""
     )
 
-    argparser.add_argument('input', metavar='PATH', nargs='+', help='For each path given:'
-                                                                    + ' if it\'s a file, use this file;'
-                                                                    + ' if it\'s a directory, use all *.c files in this subtree')
-
-    argparser.add_argument('-d', '--debug', action="count", default=0,
-                           help='Increase quantity of debugging messages (only useful to debug the test script itself)')
-    argparser.add_argument('-v', '--verbose', action="count", default=0,
-                           help='Increase verbosity level. You can use this option multiple times.')
-    argparser.add_argument('-w', '--wrapper', metavar='PATH',
-                           help='Invoke your compiler through the shell script at PATH. (default: `ifcc-wrapper.sh`)')
-    return argparser.parse_args()
+    parser.add_argument('input', metavar='PATH', nargs='+',
+                        help="For each path given: if it's a file, use this file, if it's a directory, use all *.c files in this subtree")
+    parser.add_argument('-d', '--debug', action="count", default=0,
+                        help='Increase quantity of debugging messages (only useful to debug the test script itself)')
+    parser.add_argument('-v', '--verbose', action="count", default=0,
+                        help='Increase verbosity level. You can use this option multiple times.')
+    parser.add_argument('--ifcc', metavar='IFCC', default='../compiler/ifcc', help='Path to the IFCC compiler')
+    return parser.parse_args()
 
 
-def get_c_files(path: str) -> List[str]:
-    """return a list of all .c files in a directory tree"""
-    inputfilenames = []
-    for path in args.input:
-        path = os.path.normpath(path)  # collapse redundant slashes etc.
-        if os.path.isfile(path):
-            if path[-2:] == '.c':
-                inputfilenames.append(path)
+def get_c_files(inputs: List[Path]) -> List[Path]:
+    """Given a directory, returns a list of all .c files the directory"""
+
+    assert isinstance(inputs, list)
+    assert all(isinstance(input, Path) for input in inputs)
+
+    input_files: List[Path] = []
+
+    for input in inputs:
+        if not input.exists():
+            print_error_and_exit(f"Path {input} does not exist")
+        elif input.is_file():
+            if input.suffix == '.c':
+                input_files.append(input)
             else:
-                print_red("error: incorrect filename suffix (should be '.c'): " + path)
-                sys.exit(1)
-        elif os.path.isdir(path):
-            for dirpath, dirnames, filenames in os.walk(path):
-                inputfilenames += [dirpath + '/' + name for name in filenames if name[-2:] == '.c']
+                print_error_and_exit(f"error: incorrect filename suffix (should be '.c'): {input}")
+        elif input.is_dir():
+            for root, _, files in os.walk(input):
+                for file in files:
+                    if file.endswith('.c'):
+                        input_files.append(Path(root) / file)
         else:
-            print_red("error: cannot read input path `" + path + "'")
-            sys.exit(1)
+            print_error_and_exit(f"error: incorrect input type (should be a file or a directory): {input}")
 
-    return inputfilenames
+    return input_files
 
 
-def check_files_can_be_read(files: List[str]) -> None:
-    """check that all files can be opened for reading, and exit if not."""
+def check_files_can_be_read(files: List[Path]) -> None:
+    """Check that all files can be opened for reading, and raise an error if not."""
     for file in files:
         try:
-            with open(file, "r") as f:
+            with open(file, "r") as _:
                 pass  # We don't need to do anything with the file, just check that it can be opened
         except OSError as e:
-            print_red(f"error: Unable to read file {file}: {e.strerror}")
-            sys.exit(1)
+            print_error_and_exit(f"error: Unable to read file {file}: {e.strerror}")
         except Exception as e:
-            print_red(f"error: Unable to read file {file}: {e}")
-            sys.exit(1)
+            print_error_and_exit(f"error: Unable to read file {file}: {e}")
 
 
-def get_wrapper_path(args: argparse.Namespace) -> str:
-    """return the path to the wrapper script"""
-    if args.wrapper:
-        wrapper = os.path.realpath(os.getcwd() + "/" + args.wrapper)
-    else:
-        wrapper = os.path.dirname(
-            os.path.realpath(__file__)) + "/ifcc-wrapper.sh"  # TODO: set this directily in the argparse default
-
-    if not os.path.isfile(wrapper):
-        print_red("error: cannot find " + os.path.basename(wrapper) + " in directory: " + os.path.dirname(wrapper))
-        sys.exit(1)
-
-    return wrapper
+Job = Path
 
 
-def check_wrapper_can_be_executed(wrapper: str) -> None:
-    """check that the wrapper script can be executed"""
-    if not os.access(wrapper, os.X_OK):
-        print_red(f"error: {wrapper} is not executable")
-        sys.exit(1)
+def is_in_parent(child_path: Path, parent_path: Path) -> bool:
+    """
+    Check if a child path is within a parent path.
+    """
+    try:
+        # Resolve both paths to their absolute form
+        child_path = child_path.resolve()
+        parent_path = parent_path.resolve()
+
+        return child_path.is_relative_to(parent_path)
+    except ValueError:
+        # If ValueError is raised, child_path is not within parent_path
+        return False
 
 
 ######################################################################################
 ## PREPARE step: copy all test-cases under ifcc-test-output
-def prepare_test_cases(input_filenames: list, output_dir: str, debug: bool) -> list:
+def prepare_test_cases(input_files: List[Path], output_dir: Path) -> List[Job]:
     """
     Prepare the test cases by copying them into a single directory tree under the output directory.
 
     Args:
     - input_filenames: A list of input file paths.
     - output_dir: The directory where test cases will be copied.
-    - debug: Flag to indicate if debug messages should be printed.
 
     Returns:
     - A list of directories containing the prepared test cases.
@@ -146,20 +164,23 @@ def prepare_test_cases(input_filenames: list, output_dir: str, debug: bool) -> l
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    jobs = []
+    jobs: List[Job] = []
 
-    for inputfilename in input_filenames:
-        if debug >= 2:
-            print(f"debug: PREPARING {inputfilename}")
+    for input_file in input_files:
+        if debug >= 2:  # TODO : replace with logging
+            print(f"debug: PREPARING {input_file}")
 
-        if output_dir in os.path.realpath(inputfilename):
-            print_red(f'error: input filename is within output directory: {inputfilename}')
-            sys.exit(1)
+        if is_in_parent(input_file, output_dir):
+            print_error_and_exit(f"error: input filename is within output directory: {input_file}")
 
-        # Create a subdirectory for each test case
-        subdir = os.path.join(output_dir, os.path.basename(inputfilename)[:-2].replace('/', '-'))
-        os.makedirs(subdir, exist_ok=True)
-        shutil.copyfile(inputfilename, os.path.join(subdir, 'input.c'))
+        # Create a subdirectory for each test case with pathlib
+
+        subdir = output_dir / str(input_file).replace('/', '-')[:-len('.c')]
+
+        subdir.mkdir(parents=True, exist_ok=True)
+
+        shutil.copyfile(input_file, subdir / 'input.c')
+
         jobs.append(subdir)
 
     # Eliminate duplicate paths
@@ -168,16 +189,17 @@ def prepare_test_cases(input_filenames: list, output_dir: str, debug: bool) -> l
     # Sort and return the unique jobs
     unique_jobs.sort()
     if debug:
-        print("debug: list of test-cases after deduplication:", " ".join(unique_jobs))
-
+        jobs_str = "\n".join([str(job) for job in unique_jobs])
+        print(f"debug: unique jobs: {jobs_str}")
     return unique_jobs
 
 
-def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bool:
-    os.chdir(orig_cwd)
 
-    print('TEST-CASE: ' + jobname)
-    os.chdir(jobname)
+def run_test_case(job: Job, test_output_dir: Path, ifcc:Path, verbose: int=1) -> bool:
+    os.chdir(test_output_dir)
+
+    print(f'TEST-CASE: {job}')
+    os.chdir(job)
 
     ## Reference compiler = GCC
     gccstatus = command("gcc -S -o asm-gcc.s input.c", "gcc-compile.txt")
@@ -187,10 +209,10 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bo
     if gccstatus == 0:  # then both compile and link stage went well
         exegccstatus = command("./exe-gcc", "gcc-execute.txt")  # Why exegccstatus is not used?
         if args.verbose >= 2:
-            dumpfile("gcc-execute.txt")
+            print_file("gcc-execute.txt")
 
     ## IFCC compiler
-    ifccstatus = command(wrapper + " asm-ifcc.s input.c", "ifcc-compile.txt")
+    ifccstatus = command(f"{ifcc} input.c >> asm-ifcc.s", "ifcc-compile.txt")
 
     if gccstatus != 0 and ifccstatus != 0:
         ## ifcc correctly rejects invalid program -> test-case ok
@@ -204,7 +226,7 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bo
         ## ifcc wrongly rejects valid program -> error
         print_red("TEST FAIL (your compiler rejects a valid program)")
         if args.verbose:
-            dumpfile("ifcc-compile.txt")
+            print_file("ifcc-compile.txt")
         return False
 
     ## ifcc accepts to compile valid program -> let's link it
@@ -212,7 +234,7 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bo
     if ldstatus != 0:
         print_red("TEST FAIL (your compiler produces incorrect assembly)")
         if args.verbose:
-            dumpfile("ifcc-link.txt")
+            print_file("ifcc-link.txt")
         return False
 
     ## both compilers  did produce an  executable, so now we  run both
@@ -223,9 +245,9 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bo
         print("TEST FAIL (different results at execution)")
         if args.verbose:
             print("GCC:")
-            dumpfile("gcc-execute.txt")
+            print_file("gcc-execute.txt")
             print("you:")
-            dumpfile("ifcc-execute.txt")
+            print_file("ifcc-execute.txt")
         return False
 
     ## last but not least
@@ -236,51 +258,48 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bo
 if __name__ == "__main__":
     args = parse_args()
 
+    #TODO : get ifcccompiler from args
+
     if args.debug >= 2:
         print('debug: command-line arguments ' + str(args))
 
-    orig_cwd = os.getcwd()
+    orig_cwd = Path.cwd()
 
-    IFCC_TEST_OUTPUT = 'ifcc-test-output'
+    IFCC_TEST_OUTPUT = Path('ifcc-test-output')
 
-    if IFCC_TEST_OUTPUT in orig_cwd:
-        print_red('error: cannot run from within the output directory')
-        sys.exit(1)
+    if is_in_parent(orig_cwd, IFCC_TEST_OUTPUT):
+        raise ValueError("error: cannot run from within the output directory")
 
-    if os.path.isdir(IFCC_TEST_OUTPUT):
+    if IFCC_TEST_OUTPUT.exists() and  IFCC_TEST_OUTPUT.is_dir():# TODO : do not erase the entire directory, but only the test cases
         # cleanup previous output directory
-        command(f'rm -rf {IFCC_TEST_OUTPUT}')
+        print(f"debug: removing {IFCC_TEST_OUTPUT}")
+        shutil.rmtree(IFCC_TEST_OUTPUT)
 
-    os.mkdir(IFCC_TEST_OUTPUT)
+    IFCC_TEST_OUTPUT.mkdir(parents=True, exist_ok=True)
 
-    inputfilenames = get_c_files(args.input)
+    print(f"debug: args;input = {args.input}")
+    input_files = get_c_files([Path(input) for input in args.input])
 
     ## debug: after treewalk
     if args.debug:
-        print("debug: list of files after tree walk:", " ".join(inputfilenames))
+        print(f"debug: list of files after tree walk: {input_files}")
 
     ## sanity check
-    if not inputfilenames:
+    if not input_files:
         print_red("error: found no test-case in: " + " ".join(args.input))
         sys.exit(1)
 
     ## Here we check that  we can actually read the files.  Our goal is to
     ## fail as early as possible when the CLI arguments are wrong.
-    check_files_can_be_read(inputfilenames)
+    check_files_can_be_read(input_files)
 
-    ## Last but not least: we now locate the "wrapper script" that we will
-    ## use to invoke ifcc
-    wrapper = get_wrapper_path(args)
+    jobs = prepare_test_cases(input_files, IFCC_TEST_OUTPUT)
 
-    ## and we check that it is executable
-    check_wrapper_can_be_executed(wrapper)
+    print(f"{orig_cwd=}")
 
-    if args.debug:
-        print("debug: wrapper path: " + wrapper)
+    ifcc_compiler_path = Path('compiler/ifcc').resolve()
 
-    jobs = prepare_test_cases(inputfilenames, IFCC_TEST_OUTPUT, args.debug)
-
-    test_results = [run_test_case(job, orig_cwd, wrapper, args.verbose) for job in jobs]
+    test_results = [run_test_case(job, orig_cwd, ifcc_compiler_path) for job in jobs]
 
     # If any test fails (False in test_results), exit with status code 1. Otherwise, exit with 0.
     if not all(test_results):
