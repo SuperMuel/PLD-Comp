@@ -46,6 +46,9 @@ int main(int argn, const char **argv) {
   v.visit(tree);
 
   CFG *cfg = v.getCfg();
+  /*for (auto &instr : cfg->current_bb->instrs) {
+    std::cout << instr << "\n";
+  }*/
   cfg->gen_asm(std::cout);
 
   return 0;

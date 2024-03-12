@@ -10,24 +10,21 @@
 class BasicBlock;
 class CFG;
 
+const std::string registers[] = {"r8d",  "r9d",  "r10d", "r11d",
+                                 "r12d", "r13d", "r14d", "r15d"};
+
 class IRInstr {
 
 public:
   /** The instructions themselves -- feel free to subclass instead */
   typedef enum {
-    const_assign,
     var_assign,
     ldconst,
-    copy,
+    ldvar,
     add,
     sub,
     mul,
-    rmem,
-    wmem,
-    call,
-    cmp_eq,
-    cmp_lt,
-    cmp_le,
+    div,
     ret,
   } Operation;
 
@@ -35,7 +32,7 @@ public:
   IRInstr(BasicBlock *bb_, Operation op, Type t,
           const std::vector<std::string> &params);
 
-  void genAsm(std::ostream &os, std::map<std::string, Symbol> &symbolTable);
+  void genAsm(std::ostream &os, CFG *cfg);
 
   friend std::ostream &operator<<(std::ostream &os, IRInstr &instruction);
 
@@ -49,13 +46,12 @@ private:
 class BasicBlock {
 public:
   BasicBlock(CFG *cfg, std::string entry_label);
-  void gen_asm(std::ostream &o,
-               std::map<std::string, Symbol>
-                   &symbolTable); /**< x86 assembly code generation for this
-                                     basic block (very simple) */
+  void gen_asm(std::ostream &
+                   o); /**< x86 assembly code generation for this
+                                                    basic block (very simple) */
 
-  void add_IRInstr(IRInstr::Operation op, Type t,
-                   const std::vector<std::string> &params);
+  std::string add_IRInstr(IRInstr::Operation op, Type t,
+                          std::vector<std::string> params, CFG *cfg);
 
   // No encapsulation whatsoever here. Feel free to do better.
   BasicBlock *exit_true;  /**< pointer to the next basic block, true branch. If
@@ -66,7 +62,6 @@ public:
   std::string label;      /**< label of the BB, also will be the label in the
                         generated      code */
   CFG *cfg;               /** < the CFG where this block belongs */
-  // std::vector<IRInstr *> instrs; /** < the instructions themselves. */
   std::vector<IRInstr> instrs; /** < the instructions themselves. */
   std::string test_var_name;   /** < when generating IR code for an if(expr) or
                              while(expr) etc,     store here the name of the
@@ -76,14 +71,10 @@ public:
 class CFG {
 public:
   ~CFG();
-  // CFG(DefFonction *ast);
-
-  // DefFonction *ast; /**< The AST this CFG comes from */
+  CFG();
 
   void add_bb(BasicBlock *bb);
 
-  // x86 code generation: could be encapsulated in a processor class in a
-  // retargetable compiler
   std::string IR_reg_to_asm(
       std::string reg); /**< helper method: inputs a IR reg or input variable,
                       returns e.g. "-24(%rbp)" for the proper value of 24 */
@@ -93,7 +84,7 @@ public:
 
   // symbol table methods
   void add_to_symbol_table(std::string name, Type t, int line);
-  std::string create_new_tempvar(Type t, int line);
+  std::string create_new_tempvar(Type t);
   int get_var_index(std::string name);
   Type get_var_type(std::string name);
 
@@ -101,8 +92,11 @@ public:
   std::string new_BB_name();
   BasicBlock *current_bb;
 
-  // Make it protected
-  std::map<std::string, Symbol> symbolTable; /**< part of the symbol table  */
+  std::map<std::string, Symbol *> symbolTable;
+
+  // Index of the free register with smallest index
+  int freeRegister;
+
 protected:
   int nextFreeSymbolIndex; /**< to allocate new symbols in the symbol table */
   int nextBBnumber;        /**< just for naming */
