@@ -45,10 +45,7 @@ int main(int argn, const char **argv) {
   CodeGenVisitor v;
   v.visit(tree);
 
-  CFG *cfg = v.getCfg();
-  /*for (auto &instr : cfg->current_bb->instrs) {
-    std::cout << instr << "\n";
-  }*/
+  CFG *const cfg = v.getCfg();
   cfg->gen_asm(std::cout);
 
   return 0;

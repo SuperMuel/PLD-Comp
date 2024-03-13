@@ -6,7 +6,6 @@
 #include "antlr4-runtime.h"
 #include "generated/ifccBaseVisitor.h"
 #include "ir.h"
-#include <any>
 
 class CodeGenVisitor : public ifccBaseVisitor {
 public:
@@ -25,11 +24,15 @@ public:
   virtual antlrcpp::Any
   visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) override;
 
-  virtual antlrcpp::Any visitVal(ifccParser::ValContext *ctx) override;
+  virtual antlrcpp::Any visitPar(ifccParser::ParContext *ctx) override;
 
   virtual antlrcpp::Any visitMultdiv(ifccParser::MultdivContext *ctx) override;
 
   virtual antlrcpp::Any visitAddsub(ifccParser::AddsubContext *ctx) override;
+
+  virtual antlrcpp::Any visitVal(ifccParser::ValContext *ctx) override;
+
+  inline CFG *const getCfg() { return &cfg; };
 
 private:
   VisitorErrorListener errorListener;

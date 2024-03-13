@@ -3,11 +3,10 @@
 #include "VisitorErrorListener.h"
 #include "ir.h"
 #include "support/Any.h"
-#include <any>
-
-using namespace std;
 
 #include <string>
+
+using namespace std;
 
 CodeGenVisitor::~CodeGenVisitor() {
   for (auto it = cfg.symbolTable.begin(); it != cfg.symbolTable.end(); it++) {
@@ -70,72 +69,6 @@ CodeGenVisitor::visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) {
   return 0;
 }
 
-antlrcpp::Any CodeGenVisitor::visitAddsub(ifccParser::AddsubContext *ctx) {
-  std::string leftVal = visit(ctx->expr()).as<std::string>();
-  std::string rightVal = visit(ctx->term()).as<std::string>();
-
-  std::string tempName = cfg.current_bb->add_IRInstr(IRInstr::add, Type::INT,
-                                                     {leftVal, rightVal}, &cfg);
-
-  return antlrcpp::Any(tempName);
-}
-
-antlrcpp::Any CodeGenVisitor::visitSub(ifccParser::SubContext *ctx) {
-  antlrcpp::Any temp = visit(ctx->expr());
-  std::string leftVal = temp.as<std::string>();
-  std::string rightVal = visit(ctx->term()).as<std::string>();
-
-  std::string tempName = cfg.current_bb->add_IRInstr(IRInstr::sub, Type::INT,
-                                                     {leftVal, rightVal}, &cfg);
-
-  return antlrcpp::Any(tempName);
-}
-
-antlrcpp::Any CodeGenVisitor::visitMultdiv(ifccParser::MultdivContext *ctx) {
-  visit(ctx->expr(0));
-  visit(ctx->expr(1));
-
-  if (ctx->op->getText() == "*") {
-    freeRegister -= 2;
-    assembly << "imull %" << registers[freeRegister + 1] << ", %"
-             << registers[freeRegister] << std::endl;
-    freeRegister++;
-  } else {
-    // Division behaves a little bit differently, it divides the contents of
-    // edx:eax (where ':' means concatenation) with the content of the given
-    // register The quotient is stored in eax and the remainder in edx
-    assembly << "movl %" << registers[freeRegister - 2] << ", %eax"
-             << std::endl;
-    assembly << "movl $0, %edx" << std::endl;
-    assembly << "idivl %" << registers[freeRegister - 1] << std::endl;
-
-    freeRegister -= 2;
-
-    assembly << "movl %eax, %" << registers[freeRegister] << std::endl;
-
-    freeRegister++;
-  }
-
-  return 0;
-}
-
-antlrcpp::Any CodeGenVisitor::visitVal(ifccParser::ValContext *ctx) {
-  if (ctx->ID() != nullptr) {
-    Symbol *symbol = getSymbol(ctx, ctx->ID()->toString());
-    if (symbol != nullptr) {
-      assembly << "movl -" << symbol->offset << "(%rbp), %"
-               << registers[freeRegister] << std::endl;
-    }
-  } else {
-    assembly << "movl $" << ctx->INTEGER_LITERAL()->toString() << ", %"
-             << registers[freeRegister] << std::endl;
-  }
-
-  freeRegister++;
-
-  return 0;
-}
-
 antlrcpp::Any
 CodeGenVisitor::visitReturn_stmt(ifccParser::Return_stmtContext *ctx) {
 
@@ -144,6 +77,53 @@ CodeGenVisitor::visitReturn_stmt(ifccParser::Return_stmtContext *ctx) {
   cfg.current_bb->add_IRInstr(IRInstr::ret, Type::INT, {val}, &cfg);
 
   return 0;
+}
+
+antlrcpp::Any CodeGenVisitor::visitPar(ifccParser::ParContext *ctx) {
+  return visit(ctx->expr());
+}
+
+antlrcpp::Any CodeGenVisitor::visitMultdiv(ifccParser::MultdivContext *ctx) {
+  IRInstr::Operation instr =
+      (ctx->op->getText() == "*" ? IRInstr::mul : IRInstr::div);
+
+  std::string leftVal = visit(ctx->expr(0)).as<std::string>();
+  std::string rightVal = visit(ctx->expr(1)).as<std::string>();
+
+  std::string tempName =
+      cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal}, &cfg);
+
+  return tempName;
+}
+
+antlrcpp::Any CodeGenVisitor::visitAddsub(ifccParser::AddsubContext *ctx) {
+  IRInstr::Operation instr =
+      (ctx->op->getText() == "+" ? IRInstr::add : IRInstr::sub);
+
+  std::string leftVal = visit(ctx->expr(0)).as<std::string>();
+  std::string rightVal = visit(ctx->expr(1)).as<std::string>();
+
+  std::string tempName =
+      cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal}, &cfg);
+
+  return tempName;
+}
+
+antlrcpp::Any CodeGenVisitor::visitVal(ifccParser::ValContext *ctx) {
+  std::string source;
+  if (ctx->ID() != nullptr) {
+    Symbol *symbol = getSymbol(ctx, ctx->ID()->toString());
+    if (symbol != nullptr) {
+      source = cfg.current_bb->add_IRInstr(IRInstr::ldvar, Type::INT,
+                                           {ctx->ID()->toString()}, &cfg);
+    }
+  } else {
+    source =
+        cfg.current_bb->add_IRInstr(IRInstr::ldconst, Type::INT,
+                                    {ctx->INTEGER_LITERAL()->toString()}, &cfg);
+  }
+
+  return source;
 }
 
 bool CodeGenVisitor::addSymbol(antlr4::ParserRuleContext *ctx,
@@ -174,5 +154,3 @@ Symbol *CodeGenVisitor::getSymbol(antlr4::ParserRuleContext *ctx,
   it->second->used = true;
   return it->second;
 }
-
-CFG *CodeGenVisitor::getCfg() { return &cfg; }
