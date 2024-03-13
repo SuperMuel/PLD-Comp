@@ -11,18 +11,11 @@ stmt : var_decl_stmt
 var_decl_stmt : TYPE ID ';' ;
 var_assign_stmt: ID '=' expr ';' ;
 
-expr : expr '+' term #add
-     | expr '-' term #sub
-     | term #expr_nop
+expr : '(' expr ')' #par
+     |  expr op=('*' | '/') expr #multdiv
+     | expr op=('+' | '-') expr #addsub
+     | (INTEGER_LITERAL | ID) #val
      ;
-term : term '*' factor #mult
-     | term '/' factor #div
-     | factor #term_nop
-     ;
-factor : INTEGER_LITERAL #literal
-       | ID #id
-       | '(' expr ')' #parenthesis
-       ;
 
 return_stmt: RETURN expr ';' ;
 

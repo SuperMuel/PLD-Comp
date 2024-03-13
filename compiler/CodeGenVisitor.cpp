@@ -70,7 +70,7 @@ CodeGenVisitor::visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) {
   return 0;
 }
 
-antlrcpp::Any CodeGenVisitor::visitAdd(ifccParser::AddContext *ctx) {
+antlrcpp::Any CodeGenVisitor::visitAddsub(ifccParser::AddsubContext *ctx) {
   std::string leftVal = visit(ctx->expr()).as<std::string>();
   std::string rightVal = visit(ctx->term()).as<std::string>();
 
@@ -91,58 +91,49 @@ antlrcpp::Any CodeGenVisitor::visitSub(ifccParser::SubContext *ctx) {
   return antlrcpp::Any(tempName);
 }
 
-antlrcpp::Any CodeGenVisitor::visitMult(ifccParser::MultContext *ctx) {
+antlrcpp::Any CodeGenVisitor::visitMultdiv(ifccParser::MultdivContext *ctx) {
+  visit(ctx->expr(0));
+  visit(ctx->expr(1));
 
-  std::string leftVal = visit(ctx->term()).as<std::string>();
-  std::string rightVal = visit(ctx->factor()).as<std::string>();
+  if (ctx->op->getText() == "*") {
+    freeRegister -= 2;
+    assembly << "imull %" << registers[freeRegister + 1] << ", %"
+             << registers[freeRegister] << std::endl;
+    freeRegister++;
+  } else {
+    // Division behaves a little bit differently, it divides the contents of
+    // edx:eax (where ':' means concatenation) with the content of the given
+    // register The quotient is stored in eax and the remainder in edx
+    assembly << "movl %" << registers[freeRegister - 2] << ", %eax"
+             << std::endl;
+    assembly << "movl $0, %edx" << std::endl;
+    assembly << "idivl %" << registers[freeRegister - 1] << std::endl;
 
-  std::string tempName = cfg.current_bb->add_IRInstr(IRInstr::mul, Type::INT,
-                                                     {leftVal, rightVal}, &cfg);
+    freeRegister -= 2;
 
-  return antlrcpp::Any(tempName);
-}
+    assembly << "movl %eax, %" << registers[freeRegister] << std::endl;
 
-antlrcpp::Any CodeGenVisitor::visitDiv(ifccParser::DivContext *ctx) {
-
-  std::string leftVal = visit(ctx->term()).as<std::string>();
-  std::string rightVal = visit(ctx->factor()).as<std::string>();
-
-  std::string tempName = cfg.current_bb->add_IRInstr(IRInstr::div, Type::INT,
-                                                     {leftVal, rightVal}, &cfg);
-
-  return antlrcpp::Any(tempName);
-}
-
-antlrcpp::Any CodeGenVisitor::visitTerm_nop(ifccParser::Term_nopContext *ctx) {
-  return visit(ctx->factor());
-}
-
-antlrcpp::Any CodeGenVisitor::visitLiteral(ifccParser::LiteralContext *ctx) {
-
-  std::string tempName = cfg.current_bb->add_IRInstr(
-      IRInstr::ldconst, Type::INT, {ctx->INTEGER_LITERAL()->toString()}, &cfg);
-
-  return antlrcpp::Any(tempName);
-}
-
-antlrcpp::Any CodeGenVisitor::visitId(ifccParser::IdContext *ctx) {
-  Symbol *symbol = getSymbol(ctx, ctx->ID()->toString());
-  std::string source;
-  if (symbol != nullptr) {
-    source = cfg.current_bb->add_IRInstr(IRInstr::ldvar, Type::INT,
-                                         {ctx->ID()->toString()}, &cfg);
+    freeRegister++;
   }
 
-  return antlrcpp::Any(source);
+  return 0;
 }
 
-antlrcpp::Any CodeGenVisitor::visitExpr_nop(ifccParser::Expr_nopContext *ctx) {
-  return visit(ctx->term());
-}
+antlrcpp::Any CodeGenVisitor::visitVal(ifccParser::ValContext *ctx) {
+  if (ctx->ID() != nullptr) {
+    Symbol *symbol = getSymbol(ctx, ctx->ID()->toString());
+    if (symbol != nullptr) {
+      assembly << "movl -" << symbol->offset << "(%rbp), %"
+               << registers[freeRegister] << std::endl;
+    }
+  } else {
+    assembly << "movl $" << ctx->INTEGER_LITERAL()->toString() << ", %"
+             << registers[freeRegister] << std::endl;
+  }
 
-antlrcpp::Any
-CodeGenVisitor::visitParenthesis(ifccParser::ParenthesisContext *ctx) {
-  return visit(ctx->expr());
+  freeRegister++;
+
+  return 0;
 }
 
 antlrcpp::Any

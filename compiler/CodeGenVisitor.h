@@ -25,28 +25,11 @@ public:
   virtual antlrcpp::Any
   visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) override;
 
-  virtual antlrcpp::Any visitAdd(ifccParser::AddContext *ctx) override;
+  virtual antlrcpp::Any visitVal(ifccParser::ValContext *ctx) override;
 
-  virtual antlrcpp::Any visitSub(ifccParser::SubContext *ctx) override;
+  virtual antlrcpp::Any visitMultdiv(ifccParser::MultdivContext *ctx) override;
 
-  virtual antlrcpp::Any visitDiv(ifccParser::DivContext *ctx) override;
-
-  virtual antlrcpp::Any visitMult(ifccParser::MultContext *ctx) override;
-
-  virtual antlrcpp::Any
-  visitTerm_nop(ifccParser::Term_nopContext *ctx) override;
-
-  virtual antlrcpp::Any visitLiteral(ifccParser::LiteralContext *ctx) override;
-
-  virtual antlrcpp::Any visitId(ifccParser::IdContext *ctx) override;
-
-  virtual antlrcpp::Any
-  visitExpr_nop(ifccParser::Expr_nopContext *ctx) override;
-
-  virtual antlrcpp::Any
-  visitParenthesis(ifccParser::ParenthesisContext *ctx) override;
-
-  CFG *getCfg();
+  virtual antlrcpp::Any visitAddsub(ifccParser::AddsubContext *ctx) override;
 
 private:
   VisitorErrorListener errorListener;
