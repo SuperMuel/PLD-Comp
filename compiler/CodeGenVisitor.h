@@ -1,30 +1,19 @@
 #pragma once
 
 #include "ParserRuleContext.h"
+#include "Symbol.h"
 #include "VisitorErrorListener.h"
 #include "antlr4-runtime.h"
 #include "generated/ifccBaseVisitor.h"
-
-struct Symbol {
-  // Memory offset (in bytes)
-  int offset;
-  // Wheter or not this variable has been used
-  bool used;
-  // In which line the symbol was declared
-  int line;
-
-  Symbol() : used(false), offset(0), line(1) {}
-  Symbol(int line) : used(false), offset(0), line(line) {}
-};
-
-const std::string registers[] = {"r8d",  "r9d",  "r10d", "r11d",
-                                 "r12d", "r13d", "r14d", "r15d"};
+#include "ir.h"
+#include <any>
 
 class CodeGenVisitor : public ifccBaseVisitor {
 public:
-  CodeGenVisitor() : freeRegister(0){};
   virtual ~CodeGenVisitor();
+  CodeGenVisitor();
 
+  virtual antlrcpp::Any visitAxiom(ifccParser::AxiomContext *ctx) override;
   virtual antlrcpp::Any visitProg(ifccParser::ProgContext *ctx) override;
 
   virtual antlrcpp::Any
@@ -44,19 +33,25 @@ public:
 
   virtual antlrcpp::Any visitMult(ifccParser::MultContext *ctx) override;
 
+  virtual antlrcpp::Any
+  visitTerm_nop(ifccParser::Term_nopContext *ctx) override;
+
   virtual antlrcpp::Any visitLiteral(ifccParser::LiteralContext *ctx) override;
 
   virtual antlrcpp::Any visitId(ifccParser::IdContext *ctx) override;
 
+  virtual antlrcpp::Any
+  visitExpr_nop(ifccParser::Expr_nopContext *ctx) override;
+
+  virtual antlrcpp::Any
+  visitParenthesis(ifccParser::ParenthesisContext *ctx) override;
+
+  CFG *getCfg();
+
 private:
-  std::map<std::string, Symbol *> symbolTable;
-
   VisitorErrorListener errorListener;
-
+  CFG cfg;
   std::stringstream assembly;
-
-  // Index of the free register with smallest index
-  int freeRegister;
 
   bool addSymbol(antlr4::ParserRuleContext *ctx, const std::string &id);
 
