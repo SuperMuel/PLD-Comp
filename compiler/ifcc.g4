@@ -6,15 +6,19 @@ prog : 'int' 'main' '(' ')' '{' stmt* return_stmt '}' ;
 
 stmt : var_decl_stmt
      | var_assign_stmt
-     | return_stmt;
+     | return_stmt
+     | function_call_stmt;
 
 var_decl_stmt : TYPE ID ';' ;
 var_assign_stmt: ID '=' expr ';' ;
+function_call_stmt : function_call ';' ;
+function_call : ID '(' expr? ')' ;
 
 expr : '(' expr ')' #par
      |  expr op=('*' | '/') expr #multdiv
      | expr op=('+' | '-') expr #addsub
      | (INTEGER_LITERAL | ID) #val
+     | function_call #func
      ;
 
 return_stmt: RETURN expr ';' ;
@@ -29,6 +33,9 @@ VOID : 'void' ;
 SHORT : 'short' ;
 FLOAT : 'float' ;
 
+// Function names
+PUTCHAR : 'putchar' ;
+GETCHAR : 'getchar' ;
 
 // Keywords
 RETURN : 'return' ;

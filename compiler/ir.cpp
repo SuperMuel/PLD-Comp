@@ -56,6 +56,12 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
        << registers[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
+  case call: // putchar function
+    os << "call " << params[0] << std::endl;
+    break;
+  case move:
+    os << "movl %" << params[1] << ", %" << params[0] << std::endl;
+    break;
   }
 }
 
