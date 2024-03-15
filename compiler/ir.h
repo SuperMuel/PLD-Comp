@@ -25,6 +25,7 @@ public:
     sub,
     mul,
     div,
+    cmpNZ,
     ret,
   } Operation;
 
@@ -53,14 +54,17 @@ public:
                           std::vector<std::string> params, CFG *cfg);
 
   // No encapsulation whatsoever here. Feel free to do better.
-  BasicBlock *exit_true;  /**< pointer to the next basic block, true branch. If
-                             nullptr, return from procedure */
-  BasicBlock *exit_false; /**< pointer to the next basic block, false branch. If
-                             null_ptr, the basic block ends with an
-                             unconditional jump */
-  std::string label;      /**< label of the BB, also will be the label in the
-                        generated      code */
-  CFG *cfg;               /** < the CFG where this block belongs */
+  /**< pointer to the next basic block, true branch. If
+  nullptr the basic block ends with a return from the procedure*/
+  BasicBlock *exit_true;
+
+  /** pointer to the next basic block, false branch. If
+   * null_ptr, the basic block ends with an unconditional jump  */
+  BasicBlock *exit_false;
+
+  std::string label; /**< label of the BB, also will be the label in the
+                   generated      code */
+  CFG *cfg;          /** < the CFG where this block belongs */
   std::vector<IRInstr> instrs; /** < the instructions themselves. */
   std::string test_var_name;   /** < when generating IR code for an if(expr) or
                              while(expr) etc,     store here the name of the

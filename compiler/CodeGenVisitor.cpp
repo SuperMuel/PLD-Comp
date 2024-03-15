@@ -16,7 +16,7 @@ CodeGenVisitor::~CodeGenVisitor() {
 }
 
 CodeGenVisitor::CodeGenVisitor() {
-  BasicBlock *basicBlock = new BasicBlock(&cfg, "main");
+  BasicBlock *basicBlock = new BasicBlock(&cfg, "");
   cfg.add_bb(basicBlock);
 }
 
@@ -67,6 +67,28 @@ CodeGenVisitor::visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) {
 
   cfg.current_bb->add_IRInstr(IRInstr::var_assign, Type::INT,
                               {ctx->ID()->toString(), source}, &cfg);
+  return 0;
+}
+
+antlrcpp::Any CodeGenVisitor::visitIf_stmt(ifccParser::If_stmtContext *ctx) {
+  std::string result = visit(ctx->expr()).as<std::string>();
+  BasicBlock *baseBlock = cfg.current_bb;
+  BasicBlock *trueBlock = new BasicBlock(&cfg, "");
+  cfg.add_bb(trueBlock);
+  std::string nextBBLabel = ".L" + std::to_string(nextLabel);
+  nextLabel++;
+  BasicBlock *falseBlock = new BasicBlock(&cfg, nextBBLabel);
+  trueBlock->exit_true = falseBlock;
+  falseBlock->exit_true = baseBlock->exit_true;
+  for (auto *stmt : ctx->stmt()) {
+    visit(stmt);
+  }
+  baseBlock->add_IRInstr(IRInstr::cmpNZ, Type::INT, {result, falseBlock->label},
+                         &cfg);
+
+  cfg.add_bb(falseBlock);
+  baseBlock->exit_true = trueBlock;
+  baseBlock->exit_false = falseBlock;
   return 0;
 }
 
