@@ -14,11 +14,11 @@ var_assign_stmt: ID '=' expr ';' ;
 function_call_stmt : function_call ';' ;
 function_call : ID '(' expr? ')' ;
 
-expr : '(' expr ')' #par
-     |  expr op=('*' | '/') expr #multdiv
+expr : '(' expr ')'             #par
+     | expr op=('*' | '/') expr #multdiv
      | expr op=('+' | '-') expr #addsub
-     | (INTEGER_LITERAL | ID) #val
-     | function_call #func
+     | (INTEGER_LITERAL | ID)   #val
+     | function_call            #func_call_expr
      ;
 
 return_stmt: RETURN expr ';' ;
@@ -32,10 +32,6 @@ LONG : 'long' ;
 VOID : 'void' ;
 SHORT : 'short' ;
 FLOAT : 'float' ;
-
-// Function names
-PUTCHAR : 'putchar' ;
-GETCHAR : 'getchar' ;
 
 // Keywords
 RETURN : 'return' ;

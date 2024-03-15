@@ -24,6 +24,12 @@ public:
   virtual antlrcpp::Any
   visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) override;
 
+  virtual antlrcpp::Any visitFunction_call(ifccParser::Function_callContext *ctx) override;
+
+  virtual antlrcpp::Any visitFunc_call_expr(ifccParser::Func_call_exprContext *ctx) override;
+
+  virtual antlrcpp::Any visitFunc_call_stmt(ifccParser::Func_call_stmtContext *ctx) override;
+
   virtual antlrcpp::Any visitPar(ifccParser::ParContext *ctx) override;
 
   virtual antlrcpp::Any visitMultdiv(ifccParser::MultdivContext *ctx) override;

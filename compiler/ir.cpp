@@ -56,7 +56,7 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
        << registers[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
-  case call: // putchar function
+  case call:
     os << "call " << params[0] << std::endl;
     break;
   case move:
@@ -95,6 +95,12 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
   case IRInstr::ldvar:
     os << instruction.params[1] << " = " << instruction.params[0];
     break;
+  case IRInstr::call:
+    os << "call " << instruction.params[0];
+    break;
+  case IRInstr::move:
+    os << "move " << instruction.params[0] << " to " << instruction.params[1];
+    break;
   }
   return os;
 }
@@ -117,14 +123,16 @@ std::string BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::mul:
   case IRInstr::div:
   case IRInstr::ldvar:
-  case IRInstr::ldconst: {
+  case IRInstr::ldconst: 
+  case IRInstr::call:{
     dest = cfg->create_new_tempvar(t);
     params.push_back(dest);
     instrs.emplace_back(this, op, t, params);
     break;
   }
   case IRInstr::ret:
-  case IRInstr::var_assign: {
+  case IRInstr::var_assign: 
+  case IRInstr::move:{
     instrs.emplace_back(this, op, t, params);
     break;
   }

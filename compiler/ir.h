@@ -26,6 +26,8 @@ public:
     mul,
     div,
     ret,
+    call,
+    move,
   } Operation;
 
   /**  constructor */

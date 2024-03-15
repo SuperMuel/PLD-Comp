@@ -7,3 +7,4 @@ build
 # Do not track binary output
 /ifcc
 
+.antlr
