@@ -14,6 +14,8 @@ var_assign_stmt: ID '=' expr ';' ;
 expr : '(' expr ')' #par
      |  expr op=('*' | '/') expr #multdiv
      | expr op=('+' | '-') expr #addsub
+     | expr op=('<' | '<=' | '>' | '>=') expr #cmp
+     | expr op=('==' | '!=') expr #eq
      | (INTEGER_LITERAL | ID) #val
      ;
 
