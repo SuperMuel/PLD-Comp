@@ -132,7 +132,7 @@ CFG::~CFG() {
   }
 }
 
-CFG::CFG() : nextFreeSymbolIndex(4) {}
+CFG::CFG() : nextFreeSymbolIndex(4), freeRegister(0) {}
 
 void CFG::add_bb(BasicBlock *bb) {
   bbs.push_back(bb);
