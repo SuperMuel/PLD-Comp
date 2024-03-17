@@ -10,3 +10,5 @@ build
 .antlr
 
 .vscode
+
+gcc_test
