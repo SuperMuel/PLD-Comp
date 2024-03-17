@@ -6,17 +6,21 @@ prog : 'int' 'main' '(' ')' '{' stmt* return_stmt '}' ;
 
 stmt : var_decl_stmt
      | var_assign_stmt
+     | if_stmt
      | return_stmt
      | function_call_stmt;
 
 var_decl_stmt : TYPE ID ';' ;
 var_assign_stmt: ID '=' expr ';' ;
+if_stmt: IF '(' expr ')' '{' stmt* '}';
 function_call_stmt : function_call ';' ;
 function_call : ID '(' (expr (',' expr)*)? ')' ;
 
 expr : '(' expr ')'             #par
      | expr op=('*' | '/') expr #multdiv
      | expr op=('+' | '-') expr #addsub
+     | expr op=('<' | '<=' | '>' | '>=') expr #cmp
+     | expr op=('==' | '!=') expr #eq
      | (INTEGER_LITERAL | ID)   #val
      | function_call            #function_call_expr
      ;

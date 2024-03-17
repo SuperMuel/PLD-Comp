@@ -31,10 +31,15 @@ public:
   virtual antlrcpp::Any visitFunction_call_stmt(ifccParser::Function_call_stmtContext *ctx) override;
 
   virtual antlrcpp::Any visitPar(ifccParser::ParContext *ctx) override;
+  virtual antlrcpp::Any visitIf_stmt(ifccParser::If_stmtContext *ctx) override;
 
   virtual antlrcpp::Any visitMultdiv(ifccParser::MultdivContext *ctx) override;
 
   virtual antlrcpp::Any visitAddsub(ifccParser::AddsubContext *ctx) override;
+
+  virtual antlrcpp::Any visitCmp(ifccParser::CmpContext *ctx) override;
+
+  virtual antlrcpp::Any visitEq(ifccParser::EqContext *ctx) override;
 
   virtual antlrcpp::Any visitVal(ifccParser::ValContext *ctx) override;
 
@@ -42,6 +47,8 @@ public:
 
 private:
   VisitorErrorListener errorListener;
+  // Keeps track of the label for the next jump
+  int nextLabel = 1;
   CFG cfg;
   std::stringstream assembly;
 

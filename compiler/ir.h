@@ -10,8 +10,10 @@
 class BasicBlock;
 class CFG;
 
-const std::string registers[] = {"r8d",  "r9d",  "r10d", "r11d",
-                                 "r12d", "r13d", "r14d", "r15d"};
+const std::string registers8[] = {"r8b",  "r9b",  "r10b", "r11b",
+                                  "r12b", "r13b", "r14b", "r15b"};
+const std::string registers32[] = {"r8d",  "r9d",  "r10d", "r11d",
+                                   "r12d", "r13d", "r14d", "r15d"};
 
 class IRInstr {
 
@@ -25,9 +27,16 @@ public:
     sub,
     mul,
     div,
+    cmpNZ,
     ret,
     call,
     move,
+    leq,
+    lt,
+    geq,
+    gt,
+    eq,
+    neq
   } Operation;
 
   /**  constructor */
@@ -51,19 +60,21 @@ public:
   void gen_asm(std::ostream &
                    o); /**< x86 assembly code generation for this
                                                     basic block (very simple) */
-
   std::string add_IRInstr(IRInstr::Operation op, Type t,
                           std::vector<std::string> params, CFG *cfg);
 
   // No encapsulation whatsoever here. Feel free to do better.
-  BasicBlock *exit_true;  /**< pointer to the next basic block, true branch. If
-                             nullptr, return from procedure */
-  BasicBlock *exit_false; /**< pointer to the next basic block, false branch. If
-                             null_ptr, the basic block ends with an
-                             unconditional jump */
-  std::string label;      /**< label of the BB, also will be the label in the
-                        generated      code */
-  CFG *cfg;               /** < the CFG where this block belongs */
+  /**< pointer to the next basic block, true branch. If
+  nullptr the basic block ends with a return from the procedure*/
+  BasicBlock *exit_true;
+
+  /** pointer to the next basic block, false branch. If
+   * null_ptr, the basic block ends with an unconditional jump  */
+  BasicBlock *exit_false;
+
+  std::string label; /**< label of the BB, also will be the label in the
+                   generated      code */
+  CFG *cfg;          /** < the CFG where this block belongs */
   std::vector<IRInstr> instrs; /** < the instructions themselves. */
   std::string test_var_name;   /** < when generating IR code for an if(expr) or
                              while(expr) etc,     store here the name of the
