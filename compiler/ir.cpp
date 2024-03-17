@@ -57,10 +57,10 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     cfg->freeRegister++;
     break;
   case call:
-    os << "call " << params[0] << std::endl;
+    os << "call " << params[0] << "@PLT" << std::endl;
     break;
-  case move:
-    os << "movl %" << params[1] << ", %" << params[0] << std::endl;
+  case move: //ldconst move the value to a register, but in gcc it is not necessary
+    os << "movl $" << registers[0] << ", %" << params[0] << std::endl;
     break;
   }
 }
@@ -146,7 +146,7 @@ CFG::~CFG() {
   }
 }
 
-CFG::CFG() : nextFreeSymbolIndex(4) {}
+CFG::CFG() : nextFreeSymbolIndex(4), freeRegister(0) {}
 
 void CFG::add_bb(BasicBlock *bb) {
   bbs.push_back(bb);

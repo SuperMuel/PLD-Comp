@@ -12,13 +12,13 @@ stmt : var_decl_stmt
 var_decl_stmt : TYPE ID ';' ;
 var_assign_stmt: ID '=' expr ';' ;
 function_call_stmt : function_call ';' ;
-function_call : ID '(' expr? ')' ;
+function_call : ID '(' (expr (',' expr)*)? ')' ;
 
 expr : '(' expr ')'             #par
      | expr op=('*' | '/') expr #multdiv
      | expr op=('+' | '-') expr #addsub
      | (INTEGER_LITERAL | ID)   #val
-     | function_call            #func_call_expr
+     | function_call            #function_call_expr
      ;
 
 return_stmt: RETURN expr ';' ;

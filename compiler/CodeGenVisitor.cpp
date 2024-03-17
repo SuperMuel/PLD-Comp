@@ -79,12 +79,12 @@ CodeGenVisitor::visitReturn_stmt(ifccParser::Return_stmtContext *ctx) {
   return 0;
 }
 
-antlrcpp::Any CodeGenVisitor::visitFunction_call_stmt(ifccParser::Function_call_stmt *ctx)
+antlrcpp::Any CodeGenVisitor::visitFunction_call_stmt(ifccParser::Function_call_stmtContext *ctx)
 {
     return visit(ctx->function_call());
 }
 
-antlrcpp::Any CodeGenVisitor::visitFunc_call_expr(ifccParser::FuncContext *ctx)
+antlrcpp::Any CodeGenVisitor::visitFunction_call_expr(ifccParser::Function_call_exprContext *ctx)
 {
     // Check if return value is void
     /*VarData returnedVar = visit(ctx->Function_call()).as<VarData>();
@@ -106,23 +106,21 @@ antlrcpp::Any CodeGenVisitor::visitFunc_call_expr(ifccParser::FuncContext *ctx)
     return visit(ctx->function_call());
 }
 
-antlrcpp::Any CodeGenVisitor::visitFunction_call(ifccParser::Function_call *ctx)
+antlrcpp::Any CodeGenVisitor::visitFunction_call(ifccParser::Function_callContext *ctx)
 {
-    std::string functionName = ctx->ID()->getText();
+    std::string functionName = ctx->ID()->toString();
     std::string tempName;
 
-    // For now we only have one argument for putchar
-    /*
+    // Get all arguments
     std::vector<std::string> args;
     for (auto expr : ctx->expr())
     {
         args.push_back(visit(expr).as<std::string>());
-    }*/
-    std::string arg = visit(ctx->expr()).as<std::string>();
+    }
 
     if (functionName == "putchar")
     {
-      cfg.current_bb->add_IRInstr(IRInstr::move, Type::INT, {"%edi", arg}, &cfg);
+      cfg.current_bb->add_IRInstr(IRInstr::move, Type::INT, {"edi", args[0]}, &cfg);
       tempName = cfg.current_bb->add_IRInstr(IRInstr::call, Type::INT, {functionName}, &cfg);
     }
     else if (functionName == "getchar")

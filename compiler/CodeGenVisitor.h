@@ -26,9 +26,9 @@ public:
 
   virtual antlrcpp::Any visitFunction_call(ifccParser::Function_callContext *ctx) override;
 
-  virtual antlrcpp::Any visitFunc_call_expr(ifccParser::Func_call_exprContext *ctx) override;
+  virtual antlrcpp::Any visitFunction_call_expr(ifccParser::Function_call_exprContext *ctx) override;
 
-  virtual antlrcpp::Any visitFunc_call_stmt(ifccParser::Func_call_stmtContext *ctx) override;
+  virtual antlrcpp::Any visitFunction_call_stmt(ifccParser::Function_call_stmtContext *ctx) override;
 
   virtual antlrcpp::Any visitPar(ifccParser::ParContext *ctx) override;
 
