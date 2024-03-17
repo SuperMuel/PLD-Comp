@@ -1,4 +1,4 @@
 int main() {
-   putchar(5);
-   return 0;
+  putchar(65);
+  return 0;
 }

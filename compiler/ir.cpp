@@ -59,8 +59,10 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
   case call:
     os << "call " << params[0] << "@PLT" << std::endl;
     break;
-  case move: //ldconst move the value to a register, but in gcc it is not necessary
-    os << "movl $" << registers[0] << ", %" << params[0] << std::endl;
+  case move: // ldconst move the value to a register, but in gcc it is not
+             // necessary
+    os << "movl %" << registers[0] << ", %" << params[0] << std::endl;
+    cfg->freeRegister--;
     break;
   }
 }
@@ -123,16 +125,16 @@ std::string BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::mul:
   case IRInstr::div:
   case IRInstr::ldvar:
-  case IRInstr::ldconst: 
-  case IRInstr::call:{
+  case IRInstr::ldconst:
+  case IRInstr::call: {
     dest = cfg->create_new_tempvar(t);
     params.push_back(dest);
     instrs.emplace_back(this, op, t, params);
     break;
   }
   case IRInstr::ret:
-  case IRInstr::var_assign: 
-  case IRInstr::move:{
+  case IRInstr::var_assign:
+  case IRInstr::move: {
     instrs.emplace_back(this, op, t, params);
     break;
   }
