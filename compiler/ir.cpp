@@ -121,7 +121,7 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     os << "call " << params[0] << "@PLT" << std::endl;
     break;
   case move: 
-    os << "movl %" << registers[0] << ", %" << params[0] << std::endl;
+    os << "movl %" << registers8[0] << ", %" << params[0] << std::endl;
     cfg->freeRegister--;
     break;
   }
