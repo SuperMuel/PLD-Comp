@@ -6,10 +6,12 @@ prog : 'int' 'main' '(' ')' '{' stmt* return_stmt '}' ;
 
 stmt : var_decl_stmt
      | var_assign_stmt
+     | if_stmt
      | return_stmt;
 
 var_decl_stmt : TYPE ID ';' ;
 var_assign_stmt: ID '=' expr ';' ;
+if_stmt: IF '(' expr ')' '{' stmt* '}';
 
 expr : '(' expr ')' #par
      |  expr op=('*' | '/') expr #multdiv

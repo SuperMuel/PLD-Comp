@@ -25,6 +25,7 @@ public:
   visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) override;
 
   virtual antlrcpp::Any visitPar(ifccParser::ParContext *ctx) override;
+  virtual antlrcpp::Any visitIf_stmt(ifccParser::If_stmtContext *ctx) override;
 
   virtual antlrcpp::Any visitMultdiv(ifccParser::MultdivContext *ctx) override;
 
@@ -40,6 +41,8 @@ public:
 
 private:
   VisitorErrorListener errorListener;
+  // Keeps track of the label for the next jump
+  int nextLabel = 1;
   CFG cfg;
   std::stringstream assembly;
 
