@@ -26,8 +26,8 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     cfg->freeRegister++;
     break;
   case cmpNZ:
-    os << "testl %" << registers[cfg->freeRegister - 1] << ", %"
-       << registers[cfg->freeRegister - 1] << std::endl;
+    os << "testl %" << registers32[cfg->freeRegister - 1] << ", %"
+       << registers32[cfg->freeRegister - 1] << std::endl;
     // os << "je " << params[1] << std::endl;
     cfg->freeRegister--;
     break;
