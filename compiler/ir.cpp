@@ -25,6 +25,12 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
        << registers[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
+  case cmpNZ:
+    os << "testl %" << registers[cfg->freeRegister - 1] << ", %"
+       << registers[cfg->freeRegister - 1] << std::endl;
+    // os << "je " << params[1] << std::endl;
+    cfg->freeRegister--;
+    break;
   case div:
     // Division behaves a little bit differently, it divides the contents of
     // edx:eax (where ':' means concatenation) with the content of the given
@@ -94,11 +100,23 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
 }
 
 BasicBlock::BasicBlock(CFG *cfg, std::string entry_label)
-    : cfg(cfg), label(std::move(entry_label)) {}
+    : cfg(cfg), label(std::move(entry_label)), exit_true(nullptr),
+      exit_false(nullptr) {}
 
 void BasicBlock::gen_asm(std::ostream &o) {
+  if (!label.empty()) {
+    std::cout << label << ":\n";
+  }
   for (auto &instruction : instrs) {
     instruction.genAsm(o, cfg);
+  }
+  if (exit_false != nullptr) {
+    o << "je " << exit_false->label << "\n";
+  }
+  if (exit_true != nullptr) {
+    exit_true->gen_asm(o);
+  } else if (exit_false != nullptr) {
+    exit_false->gen_asm(o);
   }
 }
 
@@ -111,6 +129,7 @@ std::string BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::mul:
   case IRInstr::div:
   case IRInstr::ldvar:
+  case IRInstr::cmpNZ:
   case IRInstr::ldconst: {
     dest = cfg->create_new_tempvar(t);
     params.push_back(dest);
@@ -154,9 +173,10 @@ void CFG::gen_asm_prologue(std::ostream &o) {
 
 void CFG::gen_asm(std::ostream &o) {
   gen_asm_prologue(o);
-  current_bb->gen_asm(o);
+  bbs[0]->gen_asm(o);
   gen_asm_epilogue(o);
 }
+
 void CFG::gen_asm_epilogue(std::ostream &o) {
   // TODO
 }
