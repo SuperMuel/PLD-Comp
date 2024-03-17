@@ -16,6 +16,8 @@ if_stmt: IF '(' expr ')' '{' stmt* '}';
 expr : '(' expr ')' #par
      |  expr op=('*' | '/') expr #multdiv
      | expr op=('+' | '-') expr #addsub
+     | expr op=('<' | '<=' | '>' | '>=') expr #cmp
+     | expr op=('==' | '!=') expr #eq
      | (INTEGER_LITERAL | ID) #val
      ;
 

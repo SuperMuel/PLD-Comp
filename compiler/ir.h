@@ -10,8 +10,10 @@
 class BasicBlock;
 class CFG;
 
-const std::string registers[] = {"r8d",  "r9d",  "r10d", "r11d",
-                                 "r12d", "r13d", "r14d", "r15d"};
+const std::string registers8[] = {"r8b",  "r9b",  "r10b", "r11b",
+                                  "r12b", "r13b", "r14b", "r15b"};
+const std::string registers32[] = {"r8d",  "r9d",  "r10d", "r11d",
+                                   "r12d", "r13d", "r14d", "r15d"};
 
 class IRInstr {
 
@@ -27,6 +29,12 @@ public:
     div,
     cmpNZ,
     ret,
+    leq,
+    lt,
+    geq,
+    gt,
+    eq,
+    neq
   } Operation;
 
   /**  constructor */

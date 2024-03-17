@@ -31,6 +31,10 @@ public:
 
   virtual antlrcpp::Any visitAddsub(ifccParser::AddsubContext *ctx) override;
 
+  virtual antlrcpp::Any visitCmp(ifccParser::CmpContext *ctx) override;
+
+  virtual antlrcpp::Any visitEq(ifccParser::EqContext *ctx) override;
+
   virtual antlrcpp::Any visitVal(ifccParser::ValContext *ctx) override;
 
   inline CFG *const getCfg() { return &cfg; };

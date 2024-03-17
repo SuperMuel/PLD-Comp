@@ -130,6 +130,40 @@ antlrcpp::Any CodeGenVisitor::visitAddsub(ifccParser::AddsubContext *ctx) {
   return tempName;
 }
 
+antlrcpp::Any CodeGenVisitor::visitCmp(ifccParser::CmpContext *ctx) {
+  IRInstr::Operation instr;
+  if (ctx->op->getText() == ">") {
+    instr = IRInstr::Operation::gt;
+  } else if (ctx->op->getText() == ">=") {
+    instr = IRInstr::Operation::geq;
+  } else if (ctx->op->getText() == "<") {
+    instr = IRInstr::Operation::lt;
+  } else if (ctx->op->getText() == "<=") {
+    instr = IRInstr::Operation::leq;
+  }
+
+  std::string leftVal = visit(ctx->expr(0)).as<std::string>();
+  std::string rightVal = visit(ctx->expr(1)).as<std::string>();
+
+  std::string tempName =
+      cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal}, &cfg);
+
+  return tempName;
+}
+
+antlrcpp::Any CodeGenVisitor::visitEq(ifccParser::EqContext *ctx) {
+  IRInstr::Operation instr =
+      (ctx->op->getText() == "==" ? IRInstr::eq : IRInstr::neq);
+
+  std::string leftVal = visit(ctx->expr(0)).as<std::string>();
+  std::string rightVal = visit(ctx->expr(1)).as<std::string>();
+
+  std::string tempName =
+      cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal}, &cfg);
+
+  return tempName;
+}
+
 antlrcpp::Any CodeGenVisitor::visitVal(ifccParser::ValContext *ctx) {
   std::string source;
   if (ctx->ID() != nullptr) {
