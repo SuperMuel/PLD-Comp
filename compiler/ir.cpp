@@ -249,9 +249,13 @@ std::string CFG::IR_reg_to_asm(std::string reg) {
 }
 
 void CFG::gen_asm_prologue(std::ostream &o) {
+  #ifdef __APPLE__
+  o << ".globl _main\n";
+  o << " _main: \n";
+  #else
   o << ".globl main\n";
-  o << " main: \n";
-
+  o << "main: \n";
+  #endif
   o << "pushq %rbp\n";
   o << "movq %rsp, %rbp\n";
 }
