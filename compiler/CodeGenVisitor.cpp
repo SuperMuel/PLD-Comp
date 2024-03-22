@@ -70,25 +70,99 @@ CodeGenVisitor::visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) {
   return 0;
 }
 
-antlrcpp::Any CodeGenVisitor::visitIf_stmt(ifccParser::If_stmtContext *ctx) {
+antlrcpp::Any CodeGenVisitor::visitIf(ifccParser::IfContext *ctx) {
   std::string result = visit(ctx->expr()).as<std::string>();
-  BasicBlock *baseBlock = cfg.current_bb;
-  BasicBlock *trueBlock = new BasicBlock(&cfg, "");
-  cfg.add_bb(trueBlock);
   std::string nextBBLabel = ".L" + std::to_string(nextLabel);
   nextLabel++;
+
+  BasicBlock *baseBlock = cfg.current_bb;
+  BasicBlock *trueBlock = new BasicBlock(&cfg, "");
   BasicBlock *falseBlock = new BasicBlock(&cfg, nextBBLabel);
-  trueBlock->exit_true = falseBlock;
-  falseBlock->exit_true = baseBlock->exit_true;
-  for (auto *stmt : ctx->stmt()) {
-    visit(stmt);
-  }
+
   baseBlock->add_IRInstr(IRInstr::cmpNZ, Type::INT, {result, falseBlock->label},
                          &cfg);
 
+  trueBlock->exit_true = falseBlock;
+  falseBlock->exit_true = baseBlock->exit_true;
+
+  cfg.add_bb(trueBlock);
+  visit(ctx->block());
+
   cfg.add_bb(falseBlock);
+
   baseBlock->exit_true = trueBlock;
   baseBlock->exit_false = falseBlock;
+  return 0;
+}
+
+antlrcpp::Any CodeGenVisitor::visitIf_else(ifccParser::If_elseContext *ctx) {
+  std::string result = visit(ctx->expr()).as<std::string>();
+  std::string elseBBLabel = ".L" + std::to_string(nextLabel);
+  nextLabel++;
+  std::string endBBLabel = ".L" + std::to_string(nextLabel);
+  nextLabel++;
+
+  BasicBlock *baseBlock = cfg.current_bb;
+  BasicBlock *trueBlock = new BasicBlock(&cfg, "");
+  BasicBlock *elseBlock = new BasicBlock(&cfg, elseBBLabel);
+  BasicBlock *endBlock = new BasicBlock(&cfg, endBBLabel);
+
+  trueBlock->exit_true = endBlock;
+  elseBlock->exit_true = endBlock;
+  endBlock->exit_true = baseBlock->exit_true;
+
+  baseBlock->add_IRInstr(IRInstr::cmpNZ, Type::INT, {result, elseBlock->label},
+                         &cfg);
+
+  cfg.add_bb(trueBlock);
+  visit(ctx->if_block);
+
+  cfg.add_bb(elseBlock);
+  visit(ctx->else_block);
+
+  cfg.add_bb(endBlock);
+
+  baseBlock->exit_true = trueBlock;
+  baseBlock->exit_false = elseBlock;
+  return 0;
+}
+
+antlrcpp::Any
+CodeGenVisitor::visitWhile_stmt(ifccParser::While_stmtContext *ctx) {
+  std::string conditionBBLabel = ".L" + std::to_string(nextLabel);
+  nextLabel++;
+  std::string endBBLabel = ".L" + std::to_string(nextLabel);
+  nextLabel++;
+
+  BasicBlock *baseBlock = cfg.current_bb;
+  BasicBlock *conditionBlock = new BasicBlock(&cfg, conditionBBLabel);
+  BasicBlock *stmtBlock = new BasicBlock(&cfg, "");
+  BasicBlock *endBlock = new BasicBlock(&cfg, endBBLabel);
+
+  conditionBlock->exit_true = stmtBlock;
+  conditionBlock->exit_false = endBlock;
+  endBlock->exit_true = baseBlock->exit_true;
+  stmtBlock->exit_true = conditionBlock;
+  baseBlock->exit_true = conditionBlock;
+
+  cfg.add_bb(conditionBlock);
+  std::string result = visit(ctx->expr()).as<std::string>();
+  conditionBlock->add_IRInstr(IRInstr::cmpNZ, Type::INT,
+                              {result, endBlock->label}, &cfg);
+
+  cfg.add_bb(stmtBlock);
+  visit(ctx->block());
+
+  cfg.add_bb(endBlock);
+
+  return 0;
+}
+
+antlrcpp::Any CodeGenVisitor::visitBlock(ifccParser::BlockContext *ctx) {
+  for (ifccParser::StmtContext *stmt : ctx->stmt()) {
+    visit(stmt);
+  }
+
   return 0;
 }
 

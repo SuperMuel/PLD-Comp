@@ -98,9 +98,11 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     cfg->freeRegister++;
     break;
   case ret:
-    os << "movl %" << registers32[0] << ", %eax" << std::endl;
+    os << "movl %" << registers32[cfg->freeRegister - 1] << ", %eax"
+       << std::endl;
     os << "popq %rbp\n";
     os << "ret\n";
+    cfg->freeRegister--;
     break;
   case var_assign:
     os << "movl %" << registers32[0] << ", -"
@@ -180,9 +182,13 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
 
 BasicBlock::BasicBlock(CFG *cfg, std::string entry_label)
     : cfg(cfg), label(std::move(entry_label)), exit_true(nullptr),
-      exit_false(nullptr) {}
+      exit_false(nullptr), visited(false) {}
 
 void BasicBlock::gen_asm(std::ostream &o) {
+  if (visited) {
+    return;
+  }
+  visited = true;
   if (!label.empty()) {
     std::cout << label << ":\n";
   }
@@ -192,9 +198,13 @@ void BasicBlock::gen_asm(std::ostream &o) {
   if (exit_false != nullptr) {
     o << "je " << exit_false->label << "\n";
   }
+  if (exit_true != nullptr && !exit_true->label.empty()) {
+    o << "jmp " << exit_true->label << "\n";
+  }
   if (exit_true != nullptr) {
     exit_true->gen_asm(o);
-  } else if (exit_false != nullptr) {
+  }
+  if (exit_false != nullptr) {
     exit_false->gen_asm(o);
   }
 }
