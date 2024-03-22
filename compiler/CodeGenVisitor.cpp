@@ -51,7 +51,9 @@ antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
 
 antlrcpp::Any
 CodeGenVisitor::visitVar_decl_stmt(ifccParser::Var_decl_stmtContext *ctx) {
-  addSymbol(ctx, ctx->ID()->toString());
+  for(auto symbol : ctx->ID()){
+      addSymbol(ctx, symbol->toString());
+  }
   return 0;
 }
 

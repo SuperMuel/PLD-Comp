@@ -9,7 +9,7 @@ stmt : var_decl_stmt
      | if_stmt
      | return_stmt;
 
-var_decl_stmt : TYPE ID ';' ;
+var_decl_stmt : TYPE (ID',')*ID ';' ;
 var_assign_stmt: ID '=' expr ';' ;
 if_stmt: IF '(' expr ')' '{' stmt* '}';
 
