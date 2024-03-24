@@ -210,47 +210,32 @@ Symbol *CodeGenVisitor::getSymbol(antlr4::ParserRuleContext *ctx,
   return it->second;
 }
 
-antlrcpp::Any
-CodeGenVisitor::visitBitwise_and(ifccParser::Bitwise_andContext *ctx) {
-  visit(ctx->expr());
-  visit(ctx->term());
+antlrcpp::Any CodeGenVisitor::visitB_and(ifccParser::B_andContext *ctx) {
+  std::string leftVal = visit(ctx->expr(0)).as<std::string>();
+  std::string rightVal = visit(ctx->expr(1)).as<std::string>();
 
-  freeRegister -= 2;
+  std::string tempName = cfg.current_bb->add_IRInstr(IRInstr::b_and, Type::INT,
+                                                     {leftVal, rightVal}, &cfg);
 
-  assembly << "andl %" << registers[freeRegister + 1] << ", %"
-           << registers[freeRegister] << std::endl;
-
-  freeRegister++;
-
-  return 0;
+  return tempName;
 }
 
-antlrcpp::Any
-CodeGenVisitor::visitBitwise_or(ifccParser::Bitwise_orContext *ctx) {
-  visit(ctx->expr());
-  visit(ctx->term());
+antlrcpp::Any CodeGenVisitor::visitB_or(ifccParser::B_orContext *ctx) {
+  std::string leftVal = visit(ctx->expr(0)).as<std::string>();
+  std::string rightVal = visit(ctx->expr(1)).as<std::string>();
 
-  freeRegister -= 2;
+  std::string tempName = cfg.current_bb->add_IRInstr(IRInstr::b_or, Type::INT,
+                                                     {leftVal, rightVal}, &cfg);
 
-  assembly << "orl %" << registers[freeRegister + 1] << ", %"
-           << registers[freeRegister] << std::endl;
-
-  freeRegister++;
-
-  return 0;
+  return tempName;
 }
 
-antlrcpp::Any
-CodeGenVisitor::visitBitwise_xor(ifccParser::Bitwise_xorContext *ctx) {
-  visit(ctx->expr());
-  visit(ctx->term());
+antlrcpp::Any CodeGenVisitor::visitB_xor(ifccParser::B_xorContext *ctx) {
+  std::string leftVal = visit(ctx->expr(0)).as<std::string>();
+  std::string rightVal = visit(ctx->expr(1)).as<std::string>();
 
-  freeRegister -= 2;
+  std::string tempName = cfg.current_bb->add_IRInstr(IRInstr::b_xor, Type::INT,
+                                                     {leftVal, rightVal}, &cfg);
 
-  assembly << "xorl %" << registers[freeRegister + 1] << ", %"
-           << registers[freeRegister] << std::endl;
-
-  freeRegister++;
-
-  return 0;
+  return tempName;
 }

@@ -39,12 +39,11 @@ public:
 
   inline CFG *const getCfg() { return &cfg; };
 
-  virtual antlrcpp::Any visitBitwise_and(ifccParser::Bitwise_andContext *ctx) override;
+  virtual antlrcpp::Any visitB_and(ifccParser::B_andContext *ctx) override;
 
-  virtual antlrcpp::Any visitBitwise_or(ifccParser::Bitwise_orContext *ctx) override;
+  virtual antlrcpp::Any visitB_or(ifccParser::B_orContext *ctx) override;
 
-  virtual antlrcpp::Any visitBitwise_xor(ifccParser::Bitwise_xorContext *ctx) override;
-
+  virtual antlrcpp::Any visitB_xor(ifccParser::B_xorContext *ctx) override;
 
 private:
   VisitorErrorListener errorListener;

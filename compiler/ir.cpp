@@ -43,6 +43,24 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     os << "movl %eax, %" << registers32[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
+  case b_and:
+    cfg->freeRegister -= 2;
+    os << "andl %" << registers32[cfg->freeRegister + 1] << ", %"
+       << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;
+    break;
+  case b_or:
+    cfg->freeRegister -= 2;
+    os << "orl %" << registers32[cfg->freeRegister + 1] << ", %"
+       << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;
+    break;
+  case b_xor:
+    cfg->freeRegister -= 2;
+    os << "xorl %" << registers32[cfg->freeRegister + 1] << ", %"
+       << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;
+    break;
   case lt:
     cfg->freeRegister -= 2;
     os << "cmp %" << registers32[cfg->freeRegister + 1] << ", %"
@@ -207,6 +225,9 @@ std::string BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::sub:
   case IRInstr::mul:
   case IRInstr::div:
+  case IRInstr::b_and:
+  case IRInstr::b_or:
+  case IRInstr::b_xor:
   case IRInstr::lt:
   case IRInstr::leq:
   case IRInstr::gt:
@@ -249,13 +270,13 @@ std::string CFG::IR_reg_to_asm(std::string reg) {
 }
 
 void CFG::gen_asm_prologue(std::ostream &o) {
-  #ifdef __APPLE__
+#ifdef __APPLE__
   o << ".globl _main\n";
   o << " _main: \n";
-  #else
+#else
   o << ".globl main\n";
   o << "main: \n";
-  #endif
+#endif
   o << "pushq %rbp\n";
   o << "movq %rsp, %rbp\n";
 }
