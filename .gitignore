@@ -265,3 +265,4 @@ _deps
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,c++,clion,cmake,intellij
+.DS_Store

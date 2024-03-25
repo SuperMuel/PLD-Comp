@@ -209,3 +209,33 @@ Symbol *CodeGenVisitor::getSymbol(antlr4::ParserRuleContext *ctx,
   it->second->used = true;
   return it->second;
 }
+
+antlrcpp::Any CodeGenVisitor::visitB_and(ifccParser::B_andContext *ctx) {
+  std::string leftVal = visit(ctx->expr(0)).as<std::string>();
+  std::string rightVal = visit(ctx->expr(1)).as<std::string>();
+
+  std::string tempName = cfg.current_bb->add_IRInstr(IRInstr::b_and, Type::INT,
+                                                     {leftVal, rightVal}, &cfg);
+
+  return tempName;
+}
+
+antlrcpp::Any CodeGenVisitor::visitB_or(ifccParser::B_orContext *ctx) {
+  std::string leftVal = visit(ctx->expr(0)).as<std::string>();
+  std::string rightVal = visit(ctx->expr(1)).as<std::string>();
+
+  std::string tempName = cfg.current_bb->add_IRInstr(IRInstr::b_or, Type::INT,
+                                                     {leftVal, rightVal}, &cfg);
+
+  return tempName;
+}
+
+antlrcpp::Any CodeGenVisitor::visitB_xor(ifccParser::B_xorContext *ctx) {
+  std::string leftVal = visit(ctx->expr(0)).as<std::string>();
+  std::string rightVal = visit(ctx->expr(1)).as<std::string>();
+
+  std::string tempName = cfg.current_bb->add_IRInstr(IRInstr::b_xor, Type::INT,
+                                                     {leftVal, rightVal}, &cfg);
+
+  return tempName;
+}
