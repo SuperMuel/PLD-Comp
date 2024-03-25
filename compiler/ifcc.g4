@@ -7,11 +7,17 @@ prog : 'int' 'main' '(' ')' '{' stmt* return_stmt '}' ;
 stmt : var_decl_stmt
      | var_assign_stmt
      | if_stmt
+     | while_stmt
      | return_stmt;
 
 var_decl_stmt : TYPE ID ';' ;
 var_assign_stmt: ID '=' expr ';' ;
-if_stmt: IF '(' expr ')' '{' stmt* '}';
+if_stmt: IF '(' expr ')' block #if
+       | IF '(' expr ')' if_block=block ELSE else_block=block #if_else
+       ;
+while_stmt: WHILE '(' expr ')' block;
+
+block: '{' stmt* '}';
 
 expr : '(' expr ')' #par
      |  expr op=('*' | '/') expr #multdiv
