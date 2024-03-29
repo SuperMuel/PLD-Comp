@@ -41,6 +41,9 @@ class CodeGenVisitor : public ifccBaseVisitor {
 
   virtual antlrcpp::Any visitVal(ifccParser::ValContext *ctx) override;
 
+  virtual antlrcpp::Any visitAssignment(
+      ifccParser::AssignmentContext *ctx) override;
+
   inline CFG *const getCfg() { return &cfg; };
 
  private:

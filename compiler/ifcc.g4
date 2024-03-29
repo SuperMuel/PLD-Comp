@@ -10,7 +10,7 @@ stmt : var_decl_stmt
      | if_stmt
      | return_stmt;
 
-var_decl_assign_stmt: TYPE ID '=' expr ';' ;
+var_decl_assign_stmt: TYPE (assignment',')*assignment ';';
 var_decl_stmt : TYPE (ID',')*ID ';' ;
 var_assign_stmt: ID '=' expr ';' ;
 if_stmt: IF '(' expr ')' '{' stmt* '}';
@@ -22,6 +22,8 @@ expr : '(' expr ')' #par
      | expr op=('==' | '!=') expr #eq
      | (INTEGER_LITERAL | ID) #val
      ;
+
+assignment : ID '=' expr;
 
 return_stmt: RETURN expr ';' ;
 
@@ -65,6 +67,7 @@ WHILE : 'while' ;
 CONST : 'const' ;
 
 INTEGER_LITERAL : [0-9]+ ;
+CHARACTER_LITERAL : '\''[a-zA-Z0-9]'\'' ;
 
 COMMENT : '/*' .*? '*/' -> skip ;
 DIRECTIVE : '#' .*? '\n' -> skip ;

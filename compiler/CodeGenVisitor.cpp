@@ -63,6 +63,7 @@ antlrcpp::Any CodeGenVisitor::visitVar_decl_stmt(
 
 antlrcpp::Any CodeGenVisitor::visitVar_assign_stmt(
     ifccParser::Var_assign_stmtContext *ctx) {
+  
   Symbol *symbol = getSymbol(ctx, ctx->ID()->toString());
 
   if (symbol == nullptr) {
@@ -71,8 +72,8 @@ antlrcpp::Any CodeGenVisitor::visitVar_assign_stmt(
 
   std::string source = visit(ctx->expr()).as<std::string>();
 
-  cfg.current_bb->add_IRInstr(IRInstr::var_assign, symbol->type,
-                              {ctx->ID()->toString(), source}, &cfg);
+  cfg.current_bb->add_IRInstr(IRInstr::var_assign, symbol->type,{ctx->ID()->toString(), source}, &cfg);
+
   return 0;
 }
 
@@ -80,14 +81,21 @@ antlrcpp::Any CodeGenVisitor::visitVar_decl_assign_stmt(
     ifccParser::Var_decl_assign_stmtContext *ctx) {
   Type type = typeMap[ctx->TYPE()->getText()];
 
-  if (!addSymbol(ctx, ctx->ID()->toString(), type)) {
-    return 1;
+  for(auto assignContext : ctx->assignment()){
+    
+    if(!addSymbol(ctx, assignContext->ID()->toString(), type)){
+      return 1;
+    }
+
+    std::pair <Symbol *, std::string> result = visitAssignment(assignContext);
+    
+    Symbol *symbol = result.first;
+    std::string source = result.second;
+
+
+    cfg.current_bb->add_IRInstr(IRInstr::var_assign, type,{assignContext->ID()->toString(), source}, &cfg);
   }
-
-  std::string source = visit(ctx->expr()).as<std::string>();
-
-  cfg.current_bb->add_IRInstr(IRInstr::var_assign, type,
-                              {ctx->ID()->toString(), source}, &cfg);
+  
   return 0;
 }
 
@@ -200,6 +208,16 @@ antlrcpp::Any CodeGenVisitor::visitVal(ifccParser::ValContext *ctx) {
   }
 
   return source;
+}
+
+antlrcpp::Any CodeGenVisitor::visitAssignment(
+    ifccParser::AssignmentContext *ctx) {
+
+  Symbol *symbol = getSymbol(ctx, ctx->ID()->toString());
+  
+  std::string source = visit(ctx->expr()).as<std::string>();
+
+  return std::pair<Symbol *, std::string>(symbol, source);
 }
 
 bool CodeGenVisitor::addSymbol(antlr4::ParserRuleContext *ctx,
