@@ -20,7 +20,7 @@ while_stmt: WHILE '(' expr ')' block;
 block: '{' stmt* '}';
 
 expr : '(' expr ')' #par
-     |  expr op=('*' | '/') expr #multdiv
+     |  expr op=('*' | '/' | '%') expr #multdiv
      | expr op=('+' | '-') expr #addsub
      | expr op=('<' | '<=' | '>' | '>=') expr #cmp
      | expr op=('==' | '!=') expr #eq
