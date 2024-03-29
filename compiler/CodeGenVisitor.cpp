@@ -181,6 +181,51 @@ antlrcpp::Any CodeGenVisitor::visitVal(ifccParser::ValContext *ctx) {
   return source;
 }
 
+antlrcpp::Any CodeGenVisitor::visitUnaryOp(ifccParser::UnaryOpContext *ctx) {
+    std::string val = visit(ctx->expr()).as<std::string>();
+    IRInstr::Operation instr;
+
+    if (ctx->op->getText() == "++") {
+        instr = IRInstr::inc;
+    } else if (ctx->op->getText() == "--") {
+        instr = IRInstr::dec;
+    } else if (ctx->op->getText() == "+") {
+        instr = IRInstr::pos;
+    } else if (ctx->op->getText() == "-") {
+        instr = IRInstr::neg;
+    } else if (ctx->op->getText() == "!") {
+        instr = IRInstr::lnot;
+    } else if (ctx->op->getText() == "~") {
+        instr = IRInstr::not_;
+    } else {
+        std::string error = "Opérateur unaire non pris en charge: " + ctx->op->getText();
+        errorListener.addError(ctx, error, ErrorType::Error);
+        instr = IRInstr::pos; //ne rien faire
+    }
+    /*
+    if (ctx->op->getType() == ifccParser::INC) { //ctx->op->getText() == "++"
+        instr = IRInstr::inc;
+    } else if (ctx->op->getType() == ifccParser::DEC) { 
+        instr = IRInstr::dec;
+    } else if (ctx->op->getType() == ifccParser::PLUS) { 
+        instr = IRInstr::pos;
+    } else if (ctx->op->getType() == ifccParser::MINUS) { 
+        instr = IRInstr::neg;
+    } else if (ctx->op->getType() == ifccParser::BANG) { 
+        instr = IRInstr::lnot;
+    } else if (ctx->op->getType() == ifccParser::TILDE) { 
+        instr = IRInstr::not_;
+    } else {
+        std::string error = "Opérateur unaire non pris en charge: " + ctx->op->getText();
+        errorListener.addError(ctx, error, ErrorType::Error);
+        instr = IRInstr::pos; //ne rien faire
+    }
+    */
+    cfg.current_bb->add_IRInstr(instr, Type::INT, {val}, &cfg);    
+    return val;
+}
+
+
 bool CodeGenVisitor::addSymbol(antlr4::ParserRuleContext *ctx,
                                const std::string &id) {
   if (cfg.symbolTable.count(id)) {

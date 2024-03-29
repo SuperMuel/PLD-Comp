@@ -117,6 +117,33 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
        << registers32[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
+  // or use registers32[cfg->freeRegister -1]
+  case inc:
+    os << "incl %" << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;
+    break;
+  case dec:
+    os << "decl %" << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;
+    break;
+  case pos:
+    break;
+  case neg:
+    /*os << "testl %" << registers32[cfg->freeRegister] << ", %"
+       << registers32[cfg->freeRegister] << std::endl;
+    os << "setne %al" << std::endl;
+    os << "movzbl %al, %" << registers32[cfg->freeRegister] << std::endl;*/
+    os << "negl %" << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;
+    break;
+  case not_:
+    os << "notl %" << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;
+    break;
+  case lnot:
+    os << "xorl $1, %" << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;    
+    break;
   }
 }
 
@@ -174,6 +201,28 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
   case IRInstr::ldvar:
     os << instruction.params[1] << " = " << instruction.params[0];
     break;
+  case IRInstr::cmpNZ:
+    os << "if " << instruction.params[0] << " != 0 goto "
+       << instruction.params[1];
+    break;
+  case IRInstr::inc:
+    os << instruction.params[0] << "++";
+    break;
+  case IRInstr::dec:
+    os << instruction.params[0] << "--";
+    break;
+  case IRInstr::pos:
+    os << instruction.params[0] << " = +" << instruction.params[0];
+    break;
+  case IRInstr::neg:
+    os << instruction.params[0] << " = -" << instruction.params[0];
+    break;
+  case IRInstr::not_:
+    os << instruction.params[0] << " = ~" << instruction.params[0];
+    break;
+  case IRInstr::lnot:
+    os << instruction.params[0] << " = !" << instruction.params[0];
+    break;
   }
   return os;
 }
@@ -215,12 +264,19 @@ std::string BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::neq:
   case IRInstr::ldvar:
   case IRInstr::cmpNZ:
-  case IRInstr::ldconst: {
+  case IRInstr::ldconst: 
+  case IRInstr::inc:
+  case IRInstr::dec:
+  case IRInstr::pos:
+  case IRInstr::neg:
+  case IRInstr::not_:
+  case IRInstr::lnot: 
+    {
     dest = cfg->create_new_tempvar(t);
     params.push_back(dest);
     instrs.emplace_back(this, op, t, params);
     break;
-  }
+    }
   case IRInstr::ret:
   case IRInstr::var_assign: {
     instrs.emplace_back(this, op, t, params);

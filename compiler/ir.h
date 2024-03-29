@@ -34,7 +34,15 @@ public:
     geq,
     gt,
     eq,
-    neq
+    neq,
+
+    inc,  // Incrément
+    dec,  // Décrément
+    pos,  // Ne rien faire (positif)
+    neg,  // Opposé
+    not_, // Complément à un
+    lnot  // Négation logique
+    
   } Operation;
 
   /**  constructor */

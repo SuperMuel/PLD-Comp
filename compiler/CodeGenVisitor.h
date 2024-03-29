@@ -37,6 +37,8 @@ public:
 
   virtual antlrcpp::Any visitVal(ifccParser::ValContext *ctx) override;
 
+  virtual antlrcpp::Any visitUnaryOp(ifccParser::UnaryOpContext *ctx) override;
+
   inline CFG *const getCfg() { return &cfg; };
 
 private:

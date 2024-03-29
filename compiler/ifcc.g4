@@ -14,7 +14,8 @@ var_assign_stmt: ID '=' expr ';' ;
 if_stmt: IF '(' expr ')' '{' stmt* '}';
 
 expr : '(' expr ')' #par
-     |  expr op=('*' | '/') expr #multdiv
+     | op=('++' | '--' | '+' | '-' | '~' | '!') expr #unaryOp
+     | expr op=('*' | '/') expr #multdiv
      | expr op=('+' | '-') expr #addsub
      | expr op=('<' | '<=' | '>' | '>=') expr #cmp
      | expr op=('==' | '!=') expr #eq
@@ -61,6 +62,13 @@ UNSIGNED : 'unsigned' ;
 VOLATILE : 'volatile' ;
 WHILE : 'while' ;
 CONST : 'const' ;
+
+INC : '++';
+DEC : '--';
+PLUS : '+';
+MINUS : '-';
+BANG : '!';
+TILDE : '~';
 
 INTEGER_LITERAL : [0-9]+ ;
 
