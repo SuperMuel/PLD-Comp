@@ -25,13 +25,11 @@ antlrcpp::Any CodeGenVisitor::visitAxiom(ifccParser::AxiomContext *ctx) {
 }
 
 antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
-  for (ifccParser::StmtContext *stmt : ctx->stmt()) {
-    this->visit(stmt);
+  for (auto func : ctx->func()) {
+    this->visit(func);
   }
-
-  this->visit(ctx->return_stmt());
-
-  for (auto it = cfg.symbolTable.begin(); it != cfg.symbolTable.end(); it++) {
+  return 0;
+  /*for (auto it = cfg.symbolTable.begin(); it != cfg.symbolTable.end(); it++) {
     if (!it->second->used) {
       errorListener.addError("Variable " + it->first +
                                  " not used (declared in line " +
@@ -45,6 +43,24 @@ antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
   }
 
   cout << assembly.str();
+
+  return 0;*/
+}
+
+antlrcpp::Any CodeGenVisitor::visitFunc(ifccParser::FuncContext *ctx) {
+  // Create a new basic block for the function
+  BasicBlock *basicBlock = new BasicBlock(&cfg, ctx->ID()[0]->toString());
+  cfg.add_bb(basicBlock);
+
+  // Add the function to the symbol table
+  addSymbol(ctx, ctx->ID()[0]->toString());
+
+  // Add the function arguments to the symbol table from index 1
+  for (size_t i = 1; i < ctx->ID().size(); i++) {
+    addSymbol(ctx, ctx->ID()[i]->toString());
+  }
+  // Visit the function block
+  visit(ctx->block());
 
   return 0;
 }

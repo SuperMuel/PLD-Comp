@@ -2,9 +2,12 @@ grammar ifcc;
 
 axiom : prog EOF ;
 
-prog : 'int' 'main' '(' ')' '{' stmt* return_stmt '}' ;
+prog : func+;
 
-stmt : var_decl_stmt
+func : TYPE ID '(' (TYPE ID (',' TYPE ID)*)? ')' block ;
+
+stmt : block
+     | var_decl_stmt
      | var_assign_stmt
      | if_stmt
      | while_stmt

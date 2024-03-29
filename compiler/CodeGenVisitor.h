@@ -14,6 +14,7 @@ public:
 
   virtual antlrcpp::Any visitAxiom(ifccParser::AxiomContext *ctx) override;
   virtual antlrcpp::Any visitProg(ifccParser::ProgContext *ctx) override;
+  virtual antlrcpp::Any visitFunc(ifccParser::FuncContext *ctx) override;
 
   virtual antlrcpp::Any
   visitReturn_stmt(ifccParser::Return_stmtContext *ctx) override;
