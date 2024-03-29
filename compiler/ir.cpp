@@ -43,6 +43,24 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     os << "movl %eax, %" << registers32[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
+  case b_and:
+    cfg->freeRegister -= 2;
+    os << "andl %" << registers32[cfg->freeRegister + 1] << ", %"
+       << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;
+    break;
+  case b_or:
+    cfg->freeRegister -= 2;
+    os << "orl %" << registers32[cfg->freeRegister + 1] << ", %"
+       << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;
+    break;
+  case b_xor:
+    cfg->freeRegister -= 2;
+    os << "xorl %" << registers32[cfg->freeRegister + 1] << ", %"
+       << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;
+    break;
   case lt:
     cfg->freeRegister -= 2;
     os << "cmp %" << registers32[cfg->freeRegister + 1] << ", %"
@@ -98,9 +116,11 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     cfg->freeRegister++;
     break;
   case ret:
-    os << "movl %" << registers32[0] << ", %eax" << std::endl;
+    os << "movl %" << registers32[cfg->freeRegister - 1] << ", %eax"
+       << std::endl;
     os << "popq %rbp\n";
     os << "ret\n";
+    cfg->freeRegister--;
     break;
   case var_assign:
     os << "movl %" << registers32[0] << ", -"
@@ -193,9 +213,13 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
 
 BasicBlock::BasicBlock(CFG *cfg, std::string entry_label)
     : cfg(cfg), label(std::move(entry_label)), exit_true(nullptr),
-      exit_false(nullptr) {}
+      exit_false(nullptr), visited(false) {}
 
 void BasicBlock::gen_asm(std::ostream &o) {
+  if (visited) {
+    return;
+  }
+  visited = true;
   if (!label.empty()) {
     std::cout << label << ":\n";
   }
@@ -205,9 +229,13 @@ void BasicBlock::gen_asm(std::ostream &o) {
   if (exit_false != nullptr) {
     o << "je " << exit_false->label << "\n";
   }
+  if (exit_true != nullptr && !exit_true->label.empty()) {
+    o << "jmp " << exit_true->label << "\n";
+  }
   if (exit_true != nullptr) {
     exit_true->gen_asm(o);
-  } else if (exit_false != nullptr) {
+  }
+  if (exit_false != nullptr) {
     exit_false->gen_asm(o);
   }
 }
@@ -220,6 +248,9 @@ std::string BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::sub:
   case IRInstr::mul:
   case IRInstr::div:
+  case IRInstr::b_and:
+  case IRInstr::b_or:
+  case IRInstr::b_xor:
   case IRInstr::lt:
   case IRInstr::leq:
   case IRInstr::gt:
@@ -264,9 +295,13 @@ std::string CFG::IR_reg_to_asm(std::string reg) {
 }
 
 void CFG::gen_asm_prologue(std::ostream &o) {
+#ifdef __APPLE__
+  o << ".globl _main\n";
+  o << " _main: \n";
+#else
   o << ".globl main\n";
-  o << " main: \n";
-
+  o << "main: \n";
+#endif
   o << "pushq %rbp\n";
   o << "movq %rsp, %rbp\n";
 }

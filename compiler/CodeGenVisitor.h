@@ -31,7 +31,15 @@ public:
   virtual antlrcpp::Any visitFunction_call_stmt(ifccParser::Function_call_stmtContext *ctx) override;
 
   virtual antlrcpp::Any visitPar(ifccParser::ParContext *ctx) override;
-  virtual antlrcpp::Any visitIf_stmt(ifccParser::If_stmtContext *ctx) override;
+
+  virtual antlrcpp::Any visitIf(ifccParser::IfContext *ctx) override;
+
+  virtual antlrcpp::Any visitIf_else(ifccParser::If_elseContext *ctx) override;
+
+  virtual antlrcpp::Any
+  visitWhile_stmt(ifccParser::While_stmtContext *ctx) override;
+
+  virtual antlrcpp::Any visitBlock(ifccParser::BlockContext *ctx) override;
 
   virtual antlrcpp::Any visitMultdiv(ifccParser::MultdivContext *ctx) override;
 
@@ -44,6 +52,12 @@ public:
   virtual antlrcpp::Any visitVal(ifccParser::ValContext *ctx) override;
 
   inline CFG *const getCfg() { return &cfg; };
+
+  virtual antlrcpp::Any visitB_and(ifccParser::B_andContext *ctx) override;
+
+  virtual antlrcpp::Any visitB_or(ifccParser::B_orContext *ctx) override;
+
+  virtual antlrcpp::Any visitB_xor(ifccParser::B_xorContext *ctx) override;
 
 private:
   VisitorErrorListener errorListener;

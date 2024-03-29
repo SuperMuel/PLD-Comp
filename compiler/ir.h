@@ -27,6 +27,9 @@ public:
     sub,
     mul,
     div,
+    b_and,
+    b_or,
+    b_xor,
     cmpNZ,
     ret,
     call,
@@ -36,7 +39,7 @@ public:
     geq,
     gt,
     eq,
-    neq
+    neq,
   } Operation;
 
   /**  constructor */
@@ -71,6 +74,10 @@ public:
   /** pointer to the next basic block, false branch. If
    * null_ptr, the basic block ends with an unconditional jump  */
   BasicBlock *exit_false;
+
+  // This is true if the assembly code relative to this block has already been
+  // written
+  bool visited;
 
   std::string label; /**< label of the BB, also will be the label in the
                    generated      code */
