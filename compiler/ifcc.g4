@@ -8,6 +8,7 @@ stmt : var_decl_stmt
      | var_assign_stmt
      | if_stmt
      | while_stmt
+     | block
      | return_stmt;
 
 var_decl_stmt : TYPE ID ';' ;

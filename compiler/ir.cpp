@@ -1,8 +1,19 @@
 #include "ir.h"
+#include <memory>
 #include <string>
 
+std::ostream &operator<<(std::ostream &os, const Parameter &param) {
+  if (auto symbol = std::get_if<std::shared_ptr<Symbol>>(&param)) {
+    os << (*symbol)->lexeme;
+  } else if (auto n = std::get_if<std::string>(&param)) {
+    os << *n;
+  }
+
+  return os;
+}
+
 IRInstr::IRInstr(BasicBlock *bb_, Operation op, Type t,
-                 const std::vector<std::string> &params)
+                 const std::vector<Parameter> &params)
     : block(bb_), op(op), outType(t), params(params) {}
 
 void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
@@ -124,17 +135,18 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     break;
   case var_assign:
     os << "movl %" << registers32[0] << ", -"
-       << cfg->symbolTable[params[0]]->offset << "(%rbp)" << std::endl;
+       << std::get<std::shared_ptr<Symbol>>(params[0])->offset << "(%rbp)"
+       << std::endl;
     cfg->freeRegister--;
     break;
   case ldconst:
-    os << "movl $" << params[0] << ", %" << registers32[cfg->freeRegister]
-       << std::endl;
+    os << "movl $" << std::get<std::string>(params[0]) << ", %"
+       << registers32[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
   case ldvar:
-    os << "movl -" << cfg->symbolTable[params[0]]->offset << "(%rbp), %"
-       << registers32[cfg->freeRegister] << std::endl;
+    os << "movl -" << std::get<std::shared_ptr<Symbol>>(params[0])->offset
+       << "(%rbp), %" << registers32[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
   }
@@ -227,9 +239,9 @@ void BasicBlock::gen_asm(std::ostream &o) {
   }
 }
 
-std::string BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
-                                    std::vector<std::string> params, CFG *cfg) {
-  std::string dest;
+std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
+                                                std::vector<Parameter> params,
+                                                CFG *cfg) {
   switch (op) {
   case IRInstr::add:
   case IRInstr::sub:
@@ -247,9 +259,10 @@ std::string BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::ldvar:
   case IRInstr::cmpNZ:
   case IRInstr::ldconst: {
-    dest = cfg->create_new_tempvar(t);
-    params.push_back(dest);
+    std::shared_ptr<Symbol> symbol = cfg->create_new_tempvar(t);
+    params.push_back(symbol);
     instrs.emplace_back(this, op, t, params);
+    return symbol;
     break;
   }
   case IRInstr::ret:
@@ -258,16 +271,19 @@ std::string BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
     break;
   }
   }
-  return dest;
+  return nullptr;
 }
 
 CFG::~CFG() {
+  while (!symbolTables.empty()) {
+    pop_table();
+  }
   for (auto bb : bbs) {
     delete bb;
   }
 }
 
-CFG::CFG() : nextFreeSymbolIndex(4), freeRegister(0) {}
+CFG::CFG() : nextFreeSymbolIndex(4), freeRegister(0) { push_table(); }
 
 void CFG::add_bb(BasicBlock *bb) {
   bbs.push_back(bb);
@@ -301,17 +317,40 @@ void CFG::gen_asm_epilogue(std::ostream &o) {
   // TODO
 }
 
-void CFG::add_to_symbol_table(std::string name, Type t, int line) {
-  Symbol *newSymbol = new Symbol(line);
+void CFG::pop_table() { symbolTables.pop_front(); }
+
+bool CFG::add_symbol(std::string id, Type t, int line) {
+  if (symbolTables.front().count(id)) {
+    return false;
+  }
+  std::shared_ptr<Symbol> newSymbol = std::make_shared<Symbol>(id, line);
   newSymbol->offset = nextFreeSymbolIndex;
   nextFreeSymbolIndex += 4;
-  symbolTable[name] = newSymbol;
+  symbolTables.front()[id] = newSymbol;
+
+  return true;
 }
 
-std::string CFG::create_new_tempvar(Type t) {
+std::shared_ptr<Symbol> CFG::get_symbol(const std::string &name) {
+  auto it = symbolTables.begin();
+  while (it != symbolTables.end()) {
+    auto symbol = it->find(name);
+    if (symbol != it->end()) {
+      return symbol->second;
+    }
+    it++;
+  }
+  return nullptr;
+}
+
+std::shared_ptr<Symbol> CFG::create_new_tempvar(Type t) {
   std::string tempVarName = "!T" + std::to_string(nextFreeSymbolIndex);
-  add_to_symbol_table(tempVarName, t, 0);
-  return tempVarName;
+  if (add_symbol(tempVarName, t, 0)) {
+    std::shared_ptr<Symbol> symbol = get_symbol(tempVarName);
+    symbol->used = true;
+    return symbol;
+  }
+  return nullptr;
 }
 int CFG::get_var_index(std::string name) {
   // TODO

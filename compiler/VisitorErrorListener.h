@@ -11,6 +11,8 @@ public:
   virtual void addError(antlr4::ParserRuleContext *ctx,
                         const std::string &message,
                         ErrorType errorType = ErrorType::Error);
+  virtual void addError(const std::string &message, int line,
+                        ErrorType errorType = ErrorType::Error);
   virtual void addError(const std::string &message,
                         ErrorType errorType = ErrorType::Error);
 

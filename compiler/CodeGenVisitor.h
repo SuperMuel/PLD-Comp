@@ -9,7 +9,7 @@
 
 class CodeGenVisitor : public ifccBaseVisitor {
 public:
-  virtual ~CodeGenVisitor();
+  virtual ~CodeGenVisitor() = default;
   CodeGenVisitor();
 
   virtual antlrcpp::Any visitAxiom(ifccParser::AxiomContext *ctx) override;
@@ -62,5 +62,6 @@ private:
 
   bool addSymbol(antlr4::ParserRuleContext *ctx, const std::string &id);
 
-  Symbol *getSymbol(antlr4::ParserRuleContext *ctx, const std::string &id);
+  std::shared_ptr<Symbol> getSymbol(antlr4::ParserRuleContext *ctx,
+                                    const std::string &id);
 };
