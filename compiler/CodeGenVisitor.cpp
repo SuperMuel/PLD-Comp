@@ -49,7 +49,9 @@ antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
 
 antlrcpp::Any CodeGenVisitor::visitFunc(ifccParser::FuncContext *ctx) {
   // Create a new basic block for the function
-  BasicBlock *basicBlock = new BasicBlock(&cfg, ctx->ID()[0]->toString());
+  // put each function in its own CFG.
+  cfg = CFG();
+  BasicBlock *basicBlock = new BasicBlock(&cfg, "");
   cfg.add_bb(basicBlock);
 
   // Add the function to the symbol table
