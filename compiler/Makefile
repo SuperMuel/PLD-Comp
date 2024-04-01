@@ -20,6 +20,7 @@ OBJECTS=build/ifccBaseVisitor.o \
 	build/main.o \
 	build/CodeGenVisitor.o \
 	build/VisitorErrorListener.o \
+	build/Type.o \
 	build/ir.o \
 
 ifcc: $(OBJECTS)

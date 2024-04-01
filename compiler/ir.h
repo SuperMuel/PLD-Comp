@@ -62,6 +62,17 @@ private:
   std::vector<Parameter> params;
   Operation op;
   BasicBlock *block;
+
+  // Functions to generate the assembly
+  void handleCmpNZ(std::ostream &os, CFG *cfg);
+  void handleDiv(std::ostream &os, CFG *cfg);
+  void handleRet(std::ostream &os, CFG *cfg);
+  void handleVar_assign(std::ostream &os, CFG *cfg);
+  void handleLdconst(std::ostream &os, CFG *cfg);
+  void handleLdvar(std::ostream &os, CFG *cfg);
+
+  void handleBinaryOp(const std::string &op, std::ostream &os, CFG *cfg);
+  void handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg);
 };
 
 class BasicBlock {
@@ -71,7 +82,7 @@ public:
                    o); /**< x86 assembly code generation for this
                                                     basic block (very simple) */
   std::shared_ptr<Symbol> add_IRInstr(IRInstr::Operation op, Type t,
-                                      std::vector<Parameter> params, CFG *cfg);
+                                      std::vector<Parameter> params);
 
   // No encapsulation whatsoever here. Feel free to do better.
   /**< pointer to the next basic block, true branch. If
@@ -128,7 +139,8 @@ public:
   int freeRegister;
 
 protected:
-  int nextFreeSymbolIndex; /**< to allocate new symbols in the symbol table */
+  unsigned int
+      nextFreeSymbolIndex; /**< to allocate new symbols in the symbol table */
   int nextBBnumber;        /**< just for naming */
 
   std::vector<BasicBlock *> bbs; /**< all the basic blocks of this CFG*/

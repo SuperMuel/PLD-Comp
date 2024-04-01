@@ -2,7 +2,7 @@ grammar ifcc;
 
 axiom : prog EOF ;
 
-prog : 'int' 'main' '(' ')' '{' stmt* return_stmt '}' ;
+prog : TYPE 'main' '(' ')' '{' stmt* return_stmt '}' ;
 
 stmt : var_decl_stmt
      | var_assign_stmt
@@ -28,14 +28,15 @@ expr : '(' expr ')' #par
      | expr '&' expr #b_and
      | expr '^' expr #b_xor
      | expr '|' expr #b_or
-     | (INTEGER_LITERAL | ID) #val
+     | (INTEGER_LITERAL | CHAR_LITERAL | ID) #val
      ;
 
 return_stmt: RETURN expr ';' ;
 
-TYPE : 'int' ;
+TYPE : INT | CHAR ;
 
 // Types
+INT : 'int' ;
 CHAR : 'char' ;
 DOUBLE : 'double' ;
 LONG : 'long' ;
@@ -73,6 +74,7 @@ WHILE : 'while' ;
 CONST : 'const' ;
 
 INTEGER_LITERAL : [0-9]+ ;
+CHAR_LITERAL : '\'' . '\'' ;
 
 COMMENT : '/*' .*? '*/' -> skip ;
 DIRECTIVE : '#' .*? '\n' -> skip ;

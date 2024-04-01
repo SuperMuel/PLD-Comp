@@ -37,7 +37,13 @@ antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
 
 antlrcpp::Any
 CodeGenVisitor::visitVar_decl_stmt(ifccParser::Var_decl_stmtContext *ctx) {
-  addSymbol(ctx, ctx->ID()->toString());
+  Type type;
+  if (ctx->TYPE()->toString() == "int") {
+    type = Type::INT;
+  } else if (ctx->TYPE()->toString() == "char") {
+    type = Type::CHAR;
+  }
+  addSymbol(ctx, ctx->ID()->toString(), type);
   return 0;
 }
 
@@ -52,8 +58,7 @@ CodeGenVisitor::visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) {
   std::shared_ptr<Symbol> source =
       visit(ctx->expr()).as<std::shared_ptr<Symbol>>();
 
-  cfg.current_bb->add_IRInstr(IRInstr::var_assign, Type::INT, {symbol, source},
-                              &cfg);
+  cfg.current_bb->add_IRInstr(IRInstr::var_assign, Type::INT, {symbol, source});
   return 0;
 }
 
@@ -67,7 +72,7 @@ antlrcpp::Any CodeGenVisitor::visitIf(ifccParser::IfContext *ctx) {
   BasicBlock *trueBlock = new BasicBlock(&cfg, "");
   BasicBlock *falseBlock = new BasicBlock(&cfg, nextBBLabel);
 
-  baseBlock->add_IRInstr(IRInstr::cmpNZ, Type::INT, {result}, &cfg);
+  baseBlock->add_IRInstr(IRInstr::cmpNZ, Type::INT, {result});
 
   trueBlock->exit_true = falseBlock;
   falseBlock->exit_true = baseBlock->exit_true;
@@ -99,7 +104,7 @@ antlrcpp::Any CodeGenVisitor::visitIf_else(ifccParser::If_elseContext *ctx) {
   elseBlock->exit_true = endBlock;
   endBlock->exit_true = baseBlock->exit_true;
 
-  baseBlock->add_IRInstr(IRInstr::cmpNZ, Type::INT, {result}, &cfg);
+  baseBlock->add_IRInstr(IRInstr::cmpNZ, Type::INT, {result});
 
   cfg.add_bb(trueBlock);
   visit(ctx->if_block);
@@ -135,7 +140,7 @@ CodeGenVisitor::visitWhile_stmt(ifccParser::While_stmtContext *ctx) {
   cfg.add_bb(conditionBlock);
   std::shared_ptr<Symbol> result =
       visit(ctx->expr()).as<std::shared_ptr<Symbol>>();
-  conditionBlock->add_IRInstr(IRInstr::cmpNZ, Type::INT, {result}, &cfg);
+  conditionBlock->add_IRInstr(IRInstr::cmpNZ, Type::INT, {result});
 
   cfg.add_bb(stmtBlock);
   visit(ctx->block());
@@ -159,7 +164,7 @@ antlrcpp::Any
 CodeGenVisitor::visitReturn_stmt(ifccParser::Return_stmtContext *ctx) {
   std::shared_ptr<Symbol> val =
       visit(ctx->expr()).as<std::shared_ptr<Symbol>>();
-  cfg.current_bb->add_IRInstr(IRInstr::ret, Type::INT, {val}, &cfg);
+  cfg.current_bb->add_IRInstr(IRInstr::ret, Type::INT, {val});
 
   return 0;
 }
@@ -177,8 +182,7 @@ antlrcpp::Any CodeGenVisitor::visitMultdiv(ifccParser::MultdivContext *ctx) {
   std::shared_ptr<Symbol> rightVal =
       visit(ctx->expr(1)).as<std::shared_ptr<Symbol>>();
 
-  return cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal},
-                                     &cfg);
+  return cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal});
 }
 
 antlrcpp::Any CodeGenVisitor::visitAddsub(ifccParser::AddsubContext *ctx) {
@@ -190,8 +194,7 @@ antlrcpp::Any CodeGenVisitor::visitAddsub(ifccParser::AddsubContext *ctx) {
   std::shared_ptr<Symbol> rightVal =
       visit(ctx->expr(1)).as<std::shared_ptr<Symbol>>();
 
-  return cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal},
-                                     &cfg);
+  return cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal});
 }
 
 antlrcpp::Any CodeGenVisitor::visitCmp(ifccParser::CmpContext *ctx) {
@@ -211,8 +214,7 @@ antlrcpp::Any CodeGenVisitor::visitCmp(ifccParser::CmpContext *ctx) {
   std::shared_ptr<Symbol> rightVal =
       visit(ctx->expr(1)).as<std::shared_ptr<Symbol>>();
 
-  return cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal},
-                                     &cfg);
+  return cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal});
 }
 
 antlrcpp::Any CodeGenVisitor::visitEq(ifccParser::EqContext *ctx) {
@@ -224,8 +226,7 @@ antlrcpp::Any CodeGenVisitor::visitEq(ifccParser::EqContext *ctx) {
   std::shared_ptr<Symbol> rightVal =
       visit(ctx->expr(1)).as<std::shared_ptr<Symbol>>();
 
-  return cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal},
-                                     &cfg);
+  return cfg.current_bb->add_IRInstr(instr, Type::INT, {leftVal, rightVal});
 }
 
 antlrcpp::Any CodeGenVisitor::visitVal(ifccParser::ValContext *ctx) {
@@ -233,21 +234,23 @@ antlrcpp::Any CodeGenVisitor::visitVal(ifccParser::ValContext *ctx) {
   if (ctx->ID() != nullptr) {
     std::shared_ptr<Symbol> symbol = getSymbol(ctx, ctx->ID()->toString());
     if (symbol != nullptr) {
-      source = cfg.current_bb->add_IRInstr(IRInstr::ldvar, Type::INT, {symbol},
-                                           &cfg);
+      source = cfg.current_bb->add_IRInstr(IRInstr::ldvar, Type::INT, {symbol});
     }
-  } else {
-    source =
-        cfg.current_bb->add_IRInstr(IRInstr::ldconst, Type::INT,
-                                    {ctx->INTEGER_LITERAL()->toString()}, &cfg);
+  } else if (ctx->INTEGER_LITERAL() != nullptr) {
+    source = cfg.current_bb->add_IRInstr(IRInstr::ldconst, Type::INT,
+                                         {ctx->INTEGER_LITERAL()->toString()});
+  } else if (ctx->CHAR_LITERAL() != nullptr) {
+    std::string val =
+        std::to_string(static_cast<int>(ctx->CHAR_LITERAL()->toString()[1]));
+    source = cfg.current_bb->add_IRInstr(IRInstr::ldconst, Type::CHAR, {val});
   }
 
   return source;
 }
 
 bool CodeGenVisitor::addSymbol(antlr4::ParserRuleContext *ctx,
-                               const std::string &id) {
-  bool result = cfg.add_symbol(id, Type::INT, ctx->getStart()->getLine());
+                               const std::string &id, Type type) {
+  bool result = cfg.add_symbol(id, type, ctx->getStart()->getLine());
   if (!result) {
     std::string error = "The variable " + id + " has already been declared";
     VisitorErrorListener::addError(ctx, error, ErrorType::Error);
@@ -276,7 +279,7 @@ antlrcpp::Any CodeGenVisitor::visitB_and(ifccParser::B_andContext *ctx) {
       visit(ctx->expr(1)).as<std::shared_ptr<Symbol>>();
 
   return cfg.current_bb->add_IRInstr(IRInstr::b_and, Type::INT,
-                                     {leftVal, rightVal}, &cfg);
+                                     {leftVal, rightVal});
 }
 
 antlrcpp::Any CodeGenVisitor::visitB_or(ifccParser::B_orContext *ctx) {
@@ -286,7 +289,7 @@ antlrcpp::Any CodeGenVisitor::visitB_or(ifccParser::B_orContext *ctx) {
       visit(ctx->expr(1)).as<std::shared_ptr<Symbol>>();
 
   return cfg.current_bb->add_IRInstr(IRInstr::b_or, Type::INT,
-                                     {leftVal, rightVal}, &cfg);
+                                     {leftVal, rightVal});
 }
 
 antlrcpp::Any CodeGenVisitor::visitB_xor(ifccParser::B_xorContext *ctx) {
@@ -296,5 +299,5 @@ antlrcpp::Any CodeGenVisitor::visitB_xor(ifccParser::B_xorContext *ctx) {
       visit(ctx->expr(1)).as<std::shared_ptr<Symbol>>();
 
   return cfg.current_bb->add_IRInstr(IRInstr::b_xor, Type::INT,
-                                     {leftVal, rightVal}, &cfg);
+                                     {leftVal, rightVal});
 }
