@@ -5,7 +5,7 @@
 
 using namespace std;
 
-VisitorErrorListener::VisitorErrorListener() : mHasError(false) {}
+bool VisitorErrorListener::mHasError = false;
 
 void VisitorErrorListener::addError(const std::string &message, int line,
                                     ErrorType errorType) {

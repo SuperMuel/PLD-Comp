@@ -9,6 +9,7 @@
 #include "ParserRuleContext.h"
 #include "Symbol.h"
 #include "Type.h"
+#include "VisitorErrorListener.h"
 
 class BasicBlock;
 class CFG;

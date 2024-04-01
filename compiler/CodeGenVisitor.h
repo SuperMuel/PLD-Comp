@@ -54,7 +54,6 @@ public:
   virtual antlrcpp::Any visitB_xor(ifccParser::B_xorContext *ctx) override;
 
 private:
-  VisitorErrorListener errorListener;
   // Keeps track of the label for the next jump
   int nextLabel = 1;
   CFG cfg;

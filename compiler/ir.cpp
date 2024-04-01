@@ -1,4 +1,5 @@
 #include "ir.h"
+#include "VisitorErrorListener.h"
 #include <memory>
 #include <string>
 
@@ -317,7 +318,18 @@ void CFG::gen_asm_epilogue(std::ostream &o) {
   // TODO
 }
 
-void CFG::pop_table() { symbolTables.pop_front(); }
+void CFG::pop_table() {
+  for (auto it = symbolTables.front().begin(); it != symbolTables.front().end();
+       it++) {
+    if (!it->second->used) {
+      VisitorErrorListener::addError("Variable " + it->first +
+                                         " not used (declared in line " +
+                                         std::to_string(it->second->line) + ")",
+                                     ErrorType::Warning);
+    }
+  }
+  symbolTables.pop_front();
+}
 
 bool CFG::add_symbol(std::string id, Type t, int line) {
   if (symbolTables.front().count(id)) {

@@ -24,16 +24,9 @@ antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
 
   this->visit(ctx->return_stmt());
 
-  // TODO: do this when the symbol table is popped
-  // for (auto it = cfg.symbolTable.begin(); it != cfg.symbolTable.end(); it++)
-  // { if (!it->second->used) { errorListener.addError("Variable " + it->first +
-  // " not used (declared in line " +
-  // to_string(it->second->line) + ")",
-  // ErrorType::Warning);
-  // }
-  // }
+  cfg.pop_table();
 
-  if (errorListener.hasError()) {
+  if (VisitorErrorListener::hasError()) {
     exit(1);
   }
 
@@ -257,7 +250,7 @@ bool CodeGenVisitor::addSymbol(antlr4::ParserRuleContext *ctx,
   bool result = cfg.add_symbol(id, Type::INT, ctx->getStart()->getLine());
   if (!result) {
     std::string error = "The variable " + id + " has already been declared";
-    errorListener.addError(ctx, error, ErrorType::Error);
+    VisitorErrorListener::addError(ctx, error, ErrorType::Error);
   }
   return result;
 }
@@ -268,7 +261,7 @@ CodeGenVisitor::getSymbol(antlr4::ParserRuleContext *ctx,
   std::shared_ptr<Symbol> symbol = cfg.get_symbol(id);
   if (symbol == nullptr) {
     const std::string error = "Symbol not found: " + id;
-    errorListener.addError(ctx, error, ErrorType::Error);
+    VisitorErrorListener::addError(ctx, error, ErrorType::Error);
     return nullptr;
   }
 
