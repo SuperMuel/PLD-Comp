@@ -27,6 +27,7 @@ public:
     sub,
     mul,
     div,
+    mod,
     b_and,
     b_or,
     b_xor,
