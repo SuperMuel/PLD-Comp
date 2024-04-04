@@ -9,7 +9,7 @@
 
 class CodeGenVisitor : public ifccBaseVisitor {
 public:
-  virtual ~CodeGenVisitor();
+  virtual ~CodeGenVisitor() = default;
   CodeGenVisitor();
 
   virtual antlrcpp::Any visitAxiom(ifccParser::AxiomContext *ctx) override;
@@ -54,13 +54,14 @@ public:
   virtual antlrcpp::Any visitB_xor(ifccParser::B_xorContext *ctx) override;
 
 private:
-  VisitorErrorListener errorListener;
   // Keeps track of the label for the next jump
   int nextLabel = 1;
   CFG cfg;
   std::stringstream assembly;
 
-  bool addSymbol(antlr4::ParserRuleContext *ctx, const std::string &id);
+  bool addSymbol(antlr4::ParserRuleContext *ctx, const std::string &id,
+                 Type type);
 
-  Symbol *getSymbol(antlr4::ParserRuleContext *ctx, const std::string &id);
+  std::shared_ptr<Symbol> getSymbol(antlr4::ParserRuleContext *ctx,
+                                    const std::string &id);
 };

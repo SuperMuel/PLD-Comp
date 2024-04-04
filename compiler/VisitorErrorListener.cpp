@@ -5,10 +5,9 @@
 
 using namespace std;
 
-VisitorErrorListener::VisitorErrorListener() : mHasError(false) {}
+bool VisitorErrorListener::mHasError = false;
 
-void VisitorErrorListener::addError(antlr4::ParserRuleContext *ctx,
-                                    const std::string &message,
+void VisitorErrorListener::addError(const std::string &message, int line,
                                     ErrorType errorType) {
   switch (errorType) {
   case ErrorType::Error:
@@ -20,8 +19,13 @@ void VisitorErrorListener::addError(antlr4::ParserRuleContext *ctx,
     break;
   }
 
-  int line = ctx->getStart()->getLine();
   cerr << "Line " << line << " " << message << endl;
+}
+
+void VisitorErrorListener::addError(antlr4::ParserRuleContext *ctx,
+                                    const std::string &message,
+                                    ErrorType errorType) {
+  addError(message, ctx->getStart()->getLine(), errorType);
 }
 
 void VisitorErrorListener::addError(const std::string &message,
