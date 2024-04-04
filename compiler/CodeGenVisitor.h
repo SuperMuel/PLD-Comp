@@ -59,7 +59,8 @@ private:
   CFG cfg;
   std::stringstream assembly;
 
-  bool addSymbol(antlr4::ParserRuleContext *ctx, const std::string &id);
+  bool addSymbol(antlr4::ParserRuleContext *ctx, const std::string &id,
+                 Type type);
 
   std::shared_ptr<Symbol> getSymbol(antlr4::ParserRuleContext *ctx,
                                     const std::string &id);

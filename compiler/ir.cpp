@@ -1,4 +1,5 @@
 #include "ir.h"
+#include "Type.h"
 #include "VisitorErrorListener.h"
 #include <memory>
 #include <string>
@@ -20,135 +21,60 @@ IRInstr::IRInstr(BasicBlock *bb_, Operation op, Type t,
 void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
   switch (op) {
   case add:
-    cfg->freeRegister -= 2;
-    os << "addl %" << registers32[cfg->freeRegister + 1] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleBinaryOp("addl", os, cfg);
     break;
   case sub:
-    cfg->freeRegister -= 2;
-    os << "subl %" << registers32[cfg->freeRegister + 1] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleBinaryOp("subl", os, cfg);
     break;
   case mul:
-    cfg->freeRegister -= 2;
-    os << "imull %" << registers32[cfg->freeRegister + 1] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleBinaryOp("imull", os, cfg);
     break;
   case cmpNZ:
-    os << "testl %" << registers32[cfg->freeRegister - 1] << ", %"
-       << registers32[cfg->freeRegister - 1] << std::endl;
-    // os << "je " << params[1] << std::endl;
-    cfg->freeRegister--;
+    handleCmpNZ(os, cfg);
     break;
   case div:
-    // Division behaves a little bit differently, it divides the contents of
-    // edx:eax (where ':' means concatenation) with the content of the given
-    // register The quotient is stored in eax and the remainder in edx
-    os << "movl %" << registers32[cfg->freeRegister - 2] << ", %eax"
-       << std::endl;
-    os << "movl $0, %edx" << std::endl;
-    os << "idivl %" << registers32[cfg->freeRegister - 1] << std::endl;
-    cfg->freeRegister -= 2;
+    handleDiv(os, cfg);
     os << "movl %eax, %" << registers32[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
   case b_and:
-    cfg->freeRegister -= 2;
-    os << "andl %" << registers32[cfg->freeRegister + 1] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleBinaryOp("andl", os, cfg);
     break;
   case b_or:
-    cfg->freeRegister -= 2;
-    os << "orl %" << registers32[cfg->freeRegister + 1] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleBinaryOp("orl", os, cfg);
     break;
   case b_xor:
-    cfg->freeRegister -= 2;
-    os << "xorl %" << registers32[cfg->freeRegister + 1] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleBinaryOp("xorl", os, cfg);
     break;
   case lt:
-    cfg->freeRegister -= 2;
-    os << "cmp %" << registers32[cfg->freeRegister + 1] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    os << "setl %" << registers8[cfg->freeRegister] << std::endl;
-    os << "movzbl %" << registers8[cfg->freeRegister] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleCmpOp("setl", os, cfg);
     break;
   case leq:
-    cfg->freeRegister -= 2;
-    os << "cmp %" << registers32[cfg->freeRegister + 1] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    os << "setle %" << registers8[cfg->freeRegister] << std::endl;
-    os << "movzbl %" << registers8[cfg->freeRegister] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleCmpOp("setle", os, cfg);
     break;
   case gt:
-    cfg->freeRegister -= 2;
-    os << "cmp %" << registers32[cfg->freeRegister + 1] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    os << "setg %" << registers8[cfg->freeRegister] << std::endl;
-    os << "movzbl %" << registers8[cfg->freeRegister] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleCmpOp("setg", os, cfg);
     break;
   case geq:
-    cfg->freeRegister -= 2;
-    os << "cmp %" << registers32[cfg->freeRegister + 1] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    os << "setge %" << registers8[cfg->freeRegister] << std::endl;
-    os << "movzbl %" << registers8[cfg->freeRegister] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleCmpOp("setge", os, cfg);
     break;
   case eq:
-    cfg->freeRegister -= 2;
-    os << "cmp %" << registers32[cfg->freeRegister] << ", %"
-       << registers32[cfg->freeRegister + 1] << std::endl;
-    os << "sete %" << registers8[cfg->freeRegister] << std::endl;
-    os << "movzbl %" << registers8[cfg->freeRegister] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleCmpOp("sete", os, cfg);
     break;
   case neq:
-    cfg->freeRegister -= 2;
-    os << "cmp %" << registers32[cfg->freeRegister] << ", %"
-       << registers32[cfg->freeRegister + 1] << std::endl;
-    os << "setne %" << registers8[cfg->freeRegister] << std::endl;
-    os << "movzbl %" << registers8[cfg->freeRegister] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleCmpOp("setne", os, cfg);
     break;
   case ret:
-    os << "movl %" << registers32[cfg->freeRegister - 1] << ", %eax"
-       << std::endl;
-    os << "popq %rbp\n";
-    os << "ret\n";
-    cfg->freeRegister--;
+    handleRet(os, cfg);
     break;
   case var_assign:
-    os << "movl %" << registers32[0] << ", -"
-       << std::get<std::shared_ptr<Symbol>>(params[0])->offset << "(%rbp)"
-       << std::endl;
-    cfg->freeRegister--;
+    handleVar_assign(os, cfg);
     break;
   case ldconst:
-    os << "movl $" << std::get<std::string>(params[0]) << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleLdconst(os, cfg);
     break;
   case ldvar:
-    os << "movl -" << std::get<std::shared_ptr<Symbol>>(params[0])->offset
-       << "(%rbp), %" << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
+    handleLdvar(os, cfg);
     break;
   }
 }
@@ -211,6 +137,79 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
   return os;
 }
 
+void IRInstr::handleCmpNZ(std::ostream &os, CFG *cfg) {
+  os << "testl %" << registers32[cfg->freeRegister - 1] << ", %"
+     << registers32[cfg->freeRegister - 1] << std::endl;
+  cfg->freeRegister--;
+}
+
+void IRInstr::handleDiv(std::ostream &os, CFG *cfg) {
+  // Division behaves a little bit differently, it divides the contents of
+  // edx:eax (where ':' means concatenation) with the content of the given
+  // register The quotient is stored in eax and the remainder in edx
+  os << "movl %" << registers32[cfg->freeRegister - 2] << ", %eax" << std::endl;
+  os << "movl $0, %edx" << std::endl;
+  os << "idivl %" << registers32[cfg->freeRegister - 1] << std::endl;
+  cfg->freeRegister -= 2;
+}
+
+void IRInstr::handleRet(std::ostream &os, CFG *cfg) {
+  os << "movl %" << registers32[cfg->freeRegister - 1] << ", %eax" << std::endl;
+  os << "popq %rbp\n";
+  os << "ret\n";
+  cfg->freeRegister--;
+}
+
+void IRInstr::handleVar_assign(std::ostream &os, CFG *cfg) {
+  auto symbol = std::get<std::shared_ptr<Symbol>>(params[0]);
+  std::string instr = (symbol->type == Type::CHAR ? "movb" : "movl");
+  const std::string *registers =
+      (symbol->type == Type::CHAR ? registers8 : registers32);
+
+  os << instr << " %" << registers[cfg->freeRegister - 1] << ", -"
+     << symbol->offset << "(%rbp)" << std::endl;
+  cfg->freeRegister--;
+}
+
+void IRInstr::handleLdconst(std::ostream &os, CFG *cfg) {
+  auto symbol = std::get<std::shared_ptr<Symbol>>(params[1]);
+  auto val = std::get<std::string>(params[0]);
+  std::string instr = (symbol->type == Type::CHAR ? "movb" : "movl");
+  const std::string *registers =
+      (symbol->type == Type::CHAR ? registers8 : registers32);
+
+  os << instr << " $" << val << ", %" << registers[cfg->freeRegister]
+     << std::endl;
+  cfg->freeRegister++;
+}
+
+void IRInstr::handleLdvar(std::ostream &os, CFG *cfg) {
+  auto symbol = std::get<std::shared_ptr<Symbol>>(params[0]);
+  std::string instr = (symbol->type == Type::CHAR ? "movsbl" : "movl");
+
+  os << instr << " -" << symbol->offset << "(%rbp), %"
+     << registers32[cfg->freeRegister] << std::endl;
+  cfg->freeRegister++;
+}
+
+void IRInstr::handleBinaryOp(const std::string &op, std::ostream &os,
+                             CFG *cfg) {
+  cfg->freeRegister -= 2;
+  os << op << " %" << registers32[cfg->freeRegister + 1] << ", %"
+     << registers32[cfg->freeRegister] << std::endl;
+  cfg->freeRegister++;
+}
+
+void IRInstr::handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg) {
+  cfg->freeRegister -= 2;
+  os << "cmp %" << registers32[cfg->freeRegister + 1] << ", %"
+     << registers32[cfg->freeRegister] << std::endl;
+  os << op << " %" << registers8[cfg->freeRegister] << std::endl;
+  os << "movzbl %" << registers8[cfg->freeRegister] << ", %"
+     << registers32[cfg->freeRegister] << std::endl;
+  cfg->freeRegister++;
+}
+
 BasicBlock::BasicBlock(CFG *cfg, std::string entry_label)
     : cfg(cfg), label(std::move(entry_label)), exit_true(nullptr),
       exit_false(nullptr), visited(false) {}
@@ -241,8 +240,7 @@ void BasicBlock::gen_asm(std::ostream &o) {
 }
 
 std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
-                                                std::vector<Parameter> params,
-                                                CFG *cfg) {
+                                                std::vector<Parameter> params) {
   switch (op) {
   case IRInstr::add:
   case IRInstr::sub:
@@ -284,7 +282,7 @@ CFG::~CFG() {
   }
 }
 
-CFG::CFG() : nextFreeSymbolIndex(4), freeRegister(0) { push_table(); }
+CFG::CFG() : nextFreeSymbolIndex(1), freeRegister(0) { push_table(); }
 
 void CFG::add_bb(BasicBlock *bb) {
   bbs.push_back(bb);
@@ -335,9 +333,11 @@ bool CFG::add_symbol(std::string id, Type t, int line) {
   if (symbolTables.front().count(id)) {
     return false;
   }
-  std::shared_ptr<Symbol> newSymbol = std::make_shared<Symbol>(id, line);
-  newSymbol->offset = nextFreeSymbolIndex;
-  nextFreeSymbolIndex += 4;
+  std::shared_ptr<Symbol> newSymbol = std::make_shared<Symbol>(t, id, line);
+  unsigned int sz = getSize(t);
+  // This expression handles stack alignment
+  newSymbol->offset = (nextFreeSymbolIndex + 2 * (sz - 1)) / sz * sz;
+  nextFreeSymbolIndex += sz;
   symbolTables.front()[id] = newSymbol;
 
   return true;

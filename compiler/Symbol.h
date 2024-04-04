@@ -13,8 +13,8 @@ struct Symbol {
   // The lexeme corresponding to this symbol
   std::string lexeme;
 
-  Symbol(const std::string &lexeme)
-      : lexeme(lexeme), used(false), offset(0), line(1) {}
-  Symbol(const std::string &lexeme, int line)
-      : lexeme(lexeme), used(false), offset(0), line(line) {}
+  Symbol(Type type, const std::string &lexeme)
+      : type(type), lexeme(lexeme), used(false), offset(0), line(1) {}
+  Symbol(Type type, const std::string &lexeme, int line)
+      : type(type), lexeme(lexeme), used(false), offset(0), line(line) {}
 };
