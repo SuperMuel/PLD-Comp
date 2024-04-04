@@ -174,8 +174,14 @@ antlrcpp::Any CodeGenVisitor::visitPar(ifccParser::ParContext *ctx) {
 }
 
 antlrcpp::Any CodeGenVisitor::visitMultdiv(ifccParser::MultdivContext *ctx) {
-  IRInstr::Operation instr =
-      (ctx->op->getText() == "*" ? IRInstr::mul : IRInstr::div);
+  IRInstr::Operation instr;
+  if (ctx->op->getText() == "*") {
+    instr = IRInstr::mul;
+  } else if (ctx->op->getText() == "/") {
+    instr = IRInstr::div;
+  } else {
+    instr = IRInstr::mod;
+  }
 
   std::shared_ptr<Symbol> leftVal =
       visit(ctx->expr(0)).as<std::shared_ptr<Symbol>>();

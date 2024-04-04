@@ -37,6 +37,15 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     os << "movl %eax, %" << registers32[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
+  case mod:
+    os << "movl %" << registers32[cfg->freeRegister - 2] << ", %eax"
+       << std::endl;
+    os << "movl $0, %edx" << std::endl;
+    os << "idivl %" << registers32[cfg->freeRegister - 1] << std::endl;
+    cfg->freeRegister -= 2;
+    os << "movl %edx, %" << registers32[cfg->freeRegister] << std::endl;
+    cfg->freeRegister++;
+    break;
   case b_and:
     handleBinaryOp("andl", os, cfg);
     break;
@@ -93,6 +102,10 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
     os << instruction.params[2] << " = " << instruction.params[0] << " / "
        << instruction.params[1];
     break;
+  case IRInstr::mod:
+    os << instruction.params[2] << " = " << instruction.params[0] << " % "
+       << instruction.params[1];
+    break;
   case IRInstr::mul:
     os << instruction.params[2] << " = " << instruction.params[0] << " * "
        << instruction.params[1];
@@ -121,6 +134,18 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
     os << instruction.params[2] << " = " << instruction.params[0]
        << " != " << instruction.params[1];
     break;
+  case IRInstr::b_and:
+    os << instruction.params[2] << " = " << instruction.params[0] << " & "
+       << instruction.params[1];
+    break;
+  case IRInstr::b_or:
+    os << instruction.params[2] << " = " << instruction.params[0] << " | "
+       << instruction.params[1];
+    break;
+  case IRInstr::b_xor:
+    os << instruction.params[2] << " = " << instruction.params[0] << " ^ "
+       << instruction.params[1];
+    break;
   case IRInstr::ldconst:
     os << instruction.params[1] << " = " << instruction.params[0];
     break;
@@ -132,6 +157,9 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
     break;
   case IRInstr::ldvar:
     os << instruction.params[1] << " = " << instruction.params[0];
+    break;
+  case IRInstr::cmpNZ:
+    os << instruction.params[0] << " !=  0";
     break;
   }
   return os;
@@ -246,6 +274,7 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::sub:
   case IRInstr::mul:
   case IRInstr::div:
+  case IRInstr::mod:
   case IRInstr::b_and:
   case IRInstr::b_or:
   case IRInstr::b_xor:
