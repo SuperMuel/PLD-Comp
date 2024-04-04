@@ -67,6 +67,7 @@ private:
   // Functions to generate the assembly
   void handleCmpNZ(std::ostream &os, CFG *cfg);
   void handleDiv(std::ostream &os, CFG *cfg);
+  void handleMod(std::ostream &os, CFG *cfg);
   void handleRet(std::ostream &os, CFG *cfg);
   void handleVar_assign(std::ostream &os, CFG *cfg);
   void handleLdconst(std::ostream &os, CFG *cfg);

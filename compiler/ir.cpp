@@ -38,11 +38,7 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     cfg->freeRegister++;
     break;
   case mod:
-    os << "movl %" << registers32[cfg->freeRegister - 2] << ", %eax"
-       << std::endl;
-    os << "movl $0, %edx" << std::endl;
-    os << "idivl %" << registers32[cfg->freeRegister - 1] << std::endl;
-    cfg->freeRegister -= 2;
+    handleMod(os, cfg);
     os << "movl %edx, %" << registers32[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
@@ -175,6 +171,13 @@ void IRInstr::handleDiv(std::ostream &os, CFG *cfg) {
   // Division behaves a little bit differently, it divides the contents of
   // edx:eax (where ':' means concatenation) with the content of the given
   // register The quotient is stored in eax and the remainder in edx
+  os << "movl %" << registers32[cfg->freeRegister - 2] << ", %eax" << std::endl;
+  os << "movl $0, %edx" << std::endl;
+  os << "idivl %" << registers32[cfg->freeRegister - 1] << std::endl;
+  cfg->freeRegister -= 2;
+}
+
+void IRInstr::handleMod(std::ostream &os, CFG *cfg) {
   os << "movl %" << registers32[cfg->freeRegister - 2] << ", %eax" << std::endl;
   os << "movl $0, %edx" << std::endl;
   os << "idivl %" << registers32[cfg->freeRegister - 1] << std::endl;
