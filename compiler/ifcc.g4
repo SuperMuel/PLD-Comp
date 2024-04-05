@@ -11,7 +11,8 @@ stmt : var_decl_stmt
      | block
      | return_stmt;
 
-var_decl_stmt : TYPE ID ';' ;
+var_decl_stmt : TYPE var_decl_member (',' var_decl_member)* ';';
+var_decl_member: ID ('=' expr)?;
 var_assign_stmt: ID '=' expr ';' ;
 if_stmt: IF '(' expr ')' block #if
        | IF '(' expr ')' if_block=block ELSE else_block=block #if_else

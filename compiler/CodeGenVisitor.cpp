@@ -35,16 +35,26 @@ antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
   return 0;
 }
 
-antlrcpp::Any
-CodeGenVisitor::visitVar_decl_stmt(ifccParser::Var_decl_stmtContext *ctx) {
-  Type type;
-  if (ctx->TYPE()->toString() == "int") {
-    type = Type::INT;
-  } else if (ctx->TYPE()->toString() == "char") {
-    type = Type::CHAR;
-  }
-  addSymbol(ctx, ctx->ID()->toString(), type);
-  return 0;
+antlrcpp::Any CodeGenVisitor::visitVar_decl_stmt(ifccParser::Var_decl_stmtContext* ctx) {
+    Type type;
+    if (ctx->TYPE()->toString() == "int") {
+        type = Type::INT;
+    } else if (ctx->TYPE()->toString() == "char") {
+        type = Type::CHAR;
+    }
+    // Iterate over each var_decl_member
+    for (auto& memberCtx : ctx->var_decl_member()) {
+        std::string varName = memberCtx->ID()->toString();
+        addSymbol(memberCtx, varName, type); // Declare the variable
+
+        if (memberCtx->expr()) { // Check for initialization
+            std::shared_ptr<Symbol> symbol = getSymbol(memberCtx, varName);
+            std::shared_ptr<Symbol> source = visit(memberCtx->expr()).as<std::shared_ptr<Symbol>>();
+            cfg.current_bb->add_IRInstr(IRInstr::var_assign, Type::INT, {symbol, source});
+        }
+    }
+
+    return 0;
 }
 
 antlrcpp::Any
