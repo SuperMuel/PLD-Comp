@@ -2,17 +2,19 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <memory>
+#include <set>
+#include <stack>
 #include <string>
 #include <variant>
 #include <vector>
 
-#include "ParserRuleContext.h"
 #include "Symbol.h"
 #include "Type.h"
-#include "VisitorErrorListener.h"
 
 class BasicBlock;
 class CFG;
+class CodeGenVisitor;
 
 typedef std::map<std::string, std::shared_ptr<Symbol>> SymbolTable;
 typedef std::variant<std::shared_ptr<Symbol>, std::string> Parameter;
@@ -21,6 +23,9 @@ const std::string registers8[] = {"r8b",  "r9b",  "r10b", "r11b",
                                   "r12b", "r13b", "r14b", "r15b"};
 const std::string registers32[] = {"r8d",  "r9d",  "r10d", "r11d",
                                    "r12d", "r13d", "r14d", "r15d"};
+const std::string registers64[] = {"r8",  "r9",  "r10", "r11",
+                                   "r12", "r13", "r14", "r15"};
+const std::string paramRegisters[] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
 
 std::ostream &operator<<(std::ostream &os, const Parameter &param);
 
@@ -50,10 +55,13 @@ public:
     neq,
     neg,
     not_,
-    lnot, 
-    inc, 
-    dec, 
-    nothing
+    lnot,
+    inc,
+    dec,
+    nothing,
+    call,
+    param,
+    param_decl
   } Operation;
 
   /**  constructor */
@@ -83,10 +91,12 @@ private:
   void handleLdconst(std::ostream &os, CFG *cfg);
   void handleLdvar(std::ostream &os, CFG *cfg);
   void handleUnaryOp(const std::string &op, std::ostream &os, CFG *cfg);
+
+  void handleCall(std::ostream &os, CFG *cfg);
+  void handleParam(std::ostream &os, CFG *cfg);
+
   void handleBinaryOp(const std::string &op, std::ostream &os, CFG *cfg);
   void handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg);
-
-  int findRegister(std::shared_ptr<Symbol> &param, CFG *cfg, std::ostream &os);
 };
 
 class BasicBlock {
@@ -119,6 +129,14 @@ public:
                              variable     that holds the value of expr */
 };
 
+struct FunctionParameter {
+  Type type;
+  std::shared_ptr<Symbol> symbol;
+
+  FunctionParameter(Type type, std::shared_ptr<Symbol> symbol)
+      : type(type), symbol(symbol){};
+};
+
 struct LivenessInfo {
   std::map<IRInstr *, std::set<std::shared_ptr<Symbol>>> liveIn;
   std::map<IRInstr *, std::set<std::shared_ptr<Symbol>>> liveOut;
@@ -132,7 +150,7 @@ struct spillInformation {
 class CFG {
 public:
   ~CFG();
-  CFG();
+  CFG(Type type, const std::string &name, CodeGenVisitor *visitor);
 
   void add_bb(BasicBlock *bb);
   inline std::vector<BasicBlock *> &getBlocks() { return bbs; };
@@ -158,19 +176,48 @@ public:
 
   bool add_symbol(std::string id, Type t, int line);
   std::shared_ptr<Symbol> get_symbol(const std::string &name);
+
+  std::string &get_name() { return name; }
+  Type get_return_type() { return returnType; }
+  const std::vector<FunctionParameter> &get_parameters_type() {
+    return parameterTypes;
+  }
+
+  std::shared_ptr<Symbol> add_parameter(const std::string &name, Type type,
+                                        int line);
   std::map<std::shared_ptr<Symbol>, int> registerAssignment;
 
-  // Index of the free register with smallest index
-  // int freeRegister;
+  inline void push_parameter(std::shared_ptr<Symbol> symbol) {
+    parameterStack.push(symbol);
+  }
 
-protected:
+  inline std::shared_ptr<Symbol> pop_parameter() {
+    std::shared_ptr<Symbol> symbol = parameterStack.top();
+    parameterStack.pop();
+    return symbol;
+  }
+
+  inline CodeGenVisitor *get_visitor() { return visitor; }
+
+  int findRegister(std::shared_ptr<Symbol> &param);
+
   unsigned int
       nextFreeSymbolIndex; /**< to allocate new symbols in the symbol table */
-  int nextBBnumber;        /**< just for naming */
+
+protected:
+  int nextBBnumber; /**< just for naming */
+
+  std::string name;
+  Type returnType;
+  std::vector<FunctionParameter> parameterTypes;
+
+  std::stack<std::shared_ptr<Symbol>> parameterStack;
 
   std::vector<BasicBlock *> bbs; /**< all the basic blocks of this CFG*/
 
   std::list<SymbolTable> symbolTables;
+
+  CodeGenVisitor *visitor;
 
   void computeRegisterAllocation();
 

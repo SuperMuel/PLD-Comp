@@ -1,6 +1,8 @@
 #include "ir.h"
+#include "CodeGenVisitor.h"
 #include "Type.h"
 #include "VisitorErrorListener.h"
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -93,6 +95,14 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     break;
   case nothing:
     break;
+  case call:
+    handleCall(os, cfg);
+    break;
+  case param:
+    handleParam(os, cfg);
+    break;
+  case param_decl:
+    break;
   }
 }
 
@@ -113,7 +123,6 @@ std::set<std::shared_ptr<Symbol>> IRInstr::getUsedVariables() {
   case IRInstr::geq:
   case IRInstr::eq:
   case IRInstr::neq:
-
     result.insert(std::get<std::shared_ptr<Symbol>>(params[0]));
     result.insert(std::get<std::shared_ptr<Symbol>>(params[1]));
     break;
@@ -123,17 +132,33 @@ std::set<std::shared_ptr<Symbol>> IRInstr::getUsedVariables() {
   case IRInstr::lnot:
     result.insert(std::get<std::shared_ptr<Symbol>>(params[1]));
     break;
-  case IRInstr::ret:
   case IRInstr::cmpNZ:
   case IRInstr::neg:
   case IRInstr::not_:
   case IRInstr::inc:
   case IRInstr::dec:
+  case IRInstr::param:
     result.insert(std::get<std::shared_ptr<Symbol>>(params[0]));
     break;
-  case IRInstr::ldvar:
-  case IRInstr::nothing:
+  case ret:
+    if (outType != Type::VOID) {
+      result.insert(std::get<std::shared_ptr<Symbol>>(params[0]));
+    }
     break;
+  case IRInstr::nothing:
+  case IRInstr::ldvar:
+  case IRInstr::param_decl:
+    break;
+  case IRInstr::call: {
+    int cnt = params.size();
+    if (outType != Type::VOID) {
+      cnt--;
+    }
+    for (int i = 1; i < cnt; i++) {
+      result.insert(std::get<std::shared_ptr<Symbol>>(params[i]));
+    }
+    break;
+  }
   }
   return result;
 }
@@ -166,12 +191,19 @@ std::set<std::shared_ptr<Symbol>> IRInstr::getDeclaredVariable() {
   case IRInstr::not_:
   case IRInstr::inc:
   case IRInstr::dec:
+  case IRInstr::param_decl:
     result.insert(std::get<std::shared_ptr<Symbol>>(params[0]));
     break;
-  case ret:
+  case IRInstr::call:
+    if (outType != Type::VOID) {
+      result.insert(std::get<std::shared_ptr<Symbol>>(params[1]));
+    }
+    break;
+  case IRInstr::ret:
   case IRInstr::cmpNZ:
   case IRInstr::ldvar:
   case IRInstr::nothing:
+  case IRInstr::param:
     break;
   }
   return result;
@@ -266,6 +298,18 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
     os << "--" << instruction.params[0];
     break;
   case IRInstr::nothing:
+  case IRInstr::call:
+    if (instruction.params.size() == 2) {
+      os << instruction.params[1] << " = call " << instruction.params[0];
+    } else {
+      os << "call " << instruction.params[0];
+    }
+    break;
+  case IRInstr::param:
+    os << "param " << instruction.params[0];
+    break;
+  case IRInstr::param_decl:
+    os << "param_decl " << instruction.params[0];
     break;
   }
   return os;
@@ -274,7 +318,7 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
 void IRInstr::handleCmpNZ(std::ostream &os, CFG *cfg) {
 
   int firstRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[0]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[0]));
   if (firstRegister == cfg->scratchRegister) {
     os << "movl -" << std::get<std::shared_ptr<Symbol>>(params[0])->offset
        << "(%rbp), " << registers32[firstRegister] << std::endl;
@@ -290,11 +334,11 @@ void IRInstr::handleDiv(std::ostream &os, CFG *cfg) {
   // register The quotient is stored in eax and the remainder in edx
 
   int firstRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[0]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[0]));
   int secondRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[1]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[1]));
   int destRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[2]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[2]));
   if (firstRegister == cfg->scratchRegister) {
     os << "movl -" << std::get<std::shared_ptr<Symbol>>(params[0])->offset
        << "(%rbp), %" << registers32[firstRegister] << std::endl;
@@ -316,11 +360,11 @@ void IRInstr::handleDiv(std::ostream &os, CFG *cfg) {
 
 void IRInstr::handleMod(std::ostream &os, CFG *cfg) {
   int firstRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[0]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[0]));
   int secondRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[1]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[1]));
   int destRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[2]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[2]));
   if (firstRegister == cfg->scratchRegister) {
     os << "movl -" << std::get<std::shared_ptr<Symbol>>(params[0])->offset
        << "(%rbp), %" << registers32[firstRegister] << std::endl;
@@ -342,23 +386,25 @@ void IRInstr::handleMod(std::ostream &os, CFG *cfg) {
 }
 
 void IRInstr::handleRet(std::ostream &os, CFG *cfg) {
-  int firstRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[0]), cfg, os);
+  if (outType != Type::VOID) {
+    int firstRegister =
+        cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[0]));
 
-  if (firstRegister == cfg->scratchRegister) {
-    os << "movl -" << std::get<std::shared_ptr<Symbol>>(params[0])->offset
-       << "(%rbp), %" << registers32[firstRegister] << std::endl;
+    if (firstRegister == cfg->scratchRegister) {
+      os << "movl -" << std::get<std::shared_ptr<Symbol>>(params[0])->offset
+         << "(%rbp), %" << registers32[firstRegister] << std::endl;
+    }
+    os << "movl %" << registers32[firstRegister] << ", %eax" << std::endl;
   }
-  os << "movl %" << registers32[firstRegister] << ", %eax" << std::endl;
   os << "popq %rbp\n";
   os << "ret\n";
 }
 
 void IRInstr::handleVar_assign(std::ostream &os, CFG *cfg) {
   int destRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[0]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[0]));
   int sourceRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[1]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[1]));
   auto symbol = std::get<std::shared_ptr<Symbol>>(params[0]);
   std::string instr = (symbol->type == Type::CHAR ? "movb" : "movl");
   const std::string *registers =
@@ -382,7 +428,7 @@ void IRInstr::handleVar_assign(std::ostream &os, CFG *cfg) {
 void IRInstr::handleLdconst(std::ostream &os, CFG *cfg) {
   auto symbol = std::get<std::shared_ptr<Symbol>>(params[1]);
   auto val = std::get<std::string>(params[0]);
-  int destRegister = findRegister(symbol, cfg, os);
+  int destRegister = cfg->findRegister(symbol);
   std::string instr = (symbol->type == Type::CHAR ? "movb" : "movl");
   const std::string *registers =
       (symbol->type == Type::CHAR ? registers8 : registers32);
@@ -407,11 +453,11 @@ void IRInstr::handleBinaryOp(const std::string &op, std::ostream &os,
                              CFG *cfg) {
 
   int firstRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[0]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[0]));
   int secondRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[1]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[1]));
   int destRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[2]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[2]));
   if (firstRegister == cfg->scratchRegister) {
     os << "movl -" << std::get<std::shared_ptr<Symbol>>(params[0])->offset
        << "(%rbp), %" << registers32[firstRegister] << std::endl;
@@ -462,11 +508,11 @@ void IRInstr::handleBinaryOp(const std::string &op, std::ostream &os,
 
 void IRInstr::handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg) {
   int firstRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[0]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[0]));
   int secondRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[1]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[1]));
   int destRegister =
-      findRegister(std::get<std::shared_ptr<Symbol>>(params[2]), cfg, os);
+      cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[2]));
   if (firstRegister == cfg->scratchRegister &&
       secondRegister == cfg->scratchRegister) {
     os << "movl -" << std::get<std::shared_ptr<Symbol>>(params[0])->offset
@@ -497,18 +543,17 @@ void IRInstr::handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg) {
   }
 }
 
-int IRInstr::findRegister(std::shared_ptr<Symbol> &param, CFG *cfg,
-                          std::ostream &os) {
-  auto paramLocation = cfg->registerAssignment.find(param);
-  if (paramLocation != cfg->registerAssignment.end()) {
+int CFG::findRegister(std::shared_ptr<Symbol> &param) {
+  auto paramLocation = registerAssignment.find(param);
+  if (paramLocation != registerAssignment.end()) {
     return paramLocation->second;
   }
-  return cfg->scratchRegister;
+  return scratchRegister;
 }
 
 void IRInstr::handleUnaryOp(const std::string &op, std::ostream &os, CFG *cfg) {
   auto symbol = std::get<std::shared_ptr<Symbol>>(params[0]);
-  int varRegister = findRegister(symbol, cfg, os);
+  int varRegister = cfg->findRegister(symbol);
 
   if (op != "lnot") {
     if (varRegister == cfg->scratchRegister) {
@@ -522,14 +567,14 @@ void IRInstr::handleUnaryOp(const std::string &op, std::ostream &os, CFG *cfg) {
     }
   } else {
     os << "cmpl $0, %" << registers32[varRegister] << std::endl;
-    int varRegister = findRegister(symbol, cfg, os);
+    int varRegister = cfg->findRegister(symbol);
     if (varRegister == cfg->scratchRegister) {
       os << "movl " << registers32[varRegister] << ", -" << symbol->offset
          << "(%rbp)"
          << "\n";
     }
     auto destSymbol = std::get<std::shared_ptr<Symbol>>(params[1]);
-    int destRegister = findRegister(destSymbol, cfg, os);
+    int destRegister = cfg->findRegister(destSymbol);
     if (destRegister == cfg->scratchRegister) {
       os << "movl -" << symbol->offset << "(%rbp), %"
          << registers32[destRegister] << std::endl;
@@ -542,6 +587,69 @@ void IRInstr::handleUnaryOp(const std::string &op, std::ostream &os, CFG *cfg) {
          << "(%rbp)" << std::endl;
     }
   }
+}
+
+void IRInstr::handleCall(std::ostream &os, CFG *cfg) {
+  std::string funcName = std::get<std::string>(params[0]);
+  CFG *function = cfg->get_visitor()->getFunction(funcName);
+  int paramNum = function->get_parameters_type().size();
+
+  if (paramNum > 4) {
+    os << "subq $" << (cfg->nextFreeSymbolIndex + 15) / 16 * 16 << ", %rsp"
+       << std::endl;
+    os << "pushq %r8" << std::endl;
+    if (paramNum > 5) {
+      os << "pushq %r9" << std::endl;
+    }
+  }
+
+  for (int i = paramNum - 1; i >= 0; i--) {
+    auto symbol = std::get<std::shared_ptr<Symbol>>(params[i + 1]);
+    int paramRegister = cfg->findRegister(symbol);
+    if (paramRegister == cfg->scratchRegister) {
+      os << "movl -" << symbol->offset << "(%rbp), %"
+         << registers32[paramRegister] << std::endl;
+    }
+    if (i < 6) {
+      os << "movl %" << registers32[paramRegister] << ", %" << paramRegisters[i]
+         << std::endl;
+    } else {
+      os << "pushq %" << registers64[paramRegister] << std::endl;
+    }
+  }
+
+  auto returnVar = std::get<std::shared_ptr<Symbol>>(*params.rbegin());
+
+  os << "call " << funcName << std::endl;
+  int paramRegister = cfg->findRegister(returnVar);
+
+  if (outType != Type::VOID) {
+    os << "movl %eax, %" << registers32[paramRegister] << std::endl;
+    os << "movl %" << registers32[paramRegister] << ", -" << returnVar->offset
+       << "(%rbp)" << std::endl;
+  }
+
+  if (paramNum > 4) {
+    if (paramNum > 5) {
+      os << "popq %r9" << std::endl;
+    }
+    os << "popq %r8" << std::endl;
+    os << "addq $" << (cfg->nextFreeSymbolIndex + 15) / 16 * 16 << ", %rsp"
+       << std::endl;
+  }
+  for (int i = 7; i <= paramNum; i++) {
+    os << "popq %" << registers64[cfg->scratchRegister] << std::endl;
+  }
+
+  if (outType != Type::VOID && paramRegister != cfg->scratchRegister) {
+    os << "movl "
+       << "-" << returnVar->offset << "(%rbp)"
+       << ", %" << registers32[paramRegister] << std::endl;
+  }
+}
+
+void IRInstr::handleParam(std::ostream &os, CFG *cfg) {
+  cfg->push_parameter(std::get<std::shared_ptr<Symbol>>(params[0]));
 }
 
 BasicBlock::BasicBlock(CFG *cfg, std::string entry_label)
@@ -599,7 +707,18 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
     return symbol;
     break;
   }
+  case IRInstr::call: {
+    if (t != Type::VOID) {
+      std::shared_ptr<Symbol> symbol = cfg->create_new_tempvar(t);
+      params.push_back(symbol);
+      instrs.emplace_back(this, op, t, params);
+      return symbol;
+    } else {
+      instrs.emplace_back(this, op, t, params);
+    }
+  }
   case IRInstr::ret:
+  case IRInstr::param:
   case IRInstr::var_assign: {
     instrs.emplace_back(this, op, t, params);
     break;
@@ -612,6 +731,9 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
     return std::get<std::shared_ptr<Symbol>>(params[0]);
     break;
 
+  case IRInstr::param_decl:
+    instrs.emplace_back(this, op, t, params);
+    return std::get<std::shared_ptr<Symbol>>(params[0]);
   case IRInstr::ldvar:
     return std::get<std::shared_ptr<Symbol>>(params[0]);
     break;
@@ -622,6 +744,12 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   return nullptr;
 }
 
+CFG::CFG(Type type, const std::string &name, CodeGenVisitor *visitor)
+    : nextFreeSymbolIndex(1), name(name), returnType(type), visitor(visitor) {
+  add_bb(new BasicBlock(this, ""));
+  push_table();
+}
+
 CFG::~CFG() {
   while (!symbolTables.empty()) {
     pop_table();
@@ -630,8 +758,6 @@ CFG::~CFG() {
     delete bb;
   }
 }
-
-CFG::CFG() : nextFreeSymbolIndex(1) { push_table(); }
 
 void CFG::add_bb(BasicBlock *bb) {
   bbs.push_back(bb);
@@ -645,14 +771,30 @@ std::string CFG::IR_reg_to_asm(std::string reg) {
 
 void CFG::gen_asm_prologue(std::ostream &o) {
 #ifdef __APPLE__
-  o << ".globl _main\n";
-  o << " _main: \n";
+  o << ".globl _" << name << "\n";
+  o << "_" << name << " : \n";
 #else
-  o << ".globl main\n";
-  o << "main: \n";
+  o << ".globl " << name << "\n";
+  o << name << " : \n";
 #endif
   o << "pushq %rbp\n";
   o << "movq %rsp, %rbp\n";
+
+  for (int i = parameterTypes.size() - 1; i >= 0; i--) {
+    auto parameter = parameterTypes[i];
+    int parameterRegister = findRegister(parameter.symbol);
+    if (i < 6) {
+      o << "movl %" << paramRegisters[i] << ", %"
+        << registers32[parameterRegister] << std::endl;
+    } else {
+      o << "movl -" << 4 * (i - 5) << "(%rbp)"
+        << ", %" << registers32[parameterRegister] << std::endl;
+    }
+    if (parameterRegister == scratchRegister) {
+      o << "movl %" << registers32[parameterRegister] << ", -"
+        << parameter.symbol->offset << "(%rbp)" << std::endl;
+    }
+  }
 }
 
 void CFG::gen_asm(std::ostream &o) {
@@ -706,7 +848,9 @@ std::shared_ptr<Symbol> CFG::get_symbol(const std::string &name) {
 }
 
 std::shared_ptr<Symbol> CFG::create_new_tempvar(Type t) {
-  std::string tempVarName = "!T" + std::to_string(nextFreeSymbolIndex);
+  unsigned int sz = getSize(t);
+  unsigned int offset = (nextFreeSymbolIndex + 2 * (sz - 1)) / sz * sz;
+  std::string tempVarName = "!T" + std::to_string(offset);
   if (add_symbol(tempVarName, t, 0)) {
     std::shared_ptr<Symbol> symbol = get_symbol(tempVarName);
     symbol->used = true;
@@ -714,6 +858,19 @@ std::shared_ptr<Symbol> CFG::create_new_tempvar(Type t) {
   }
   return nullptr;
 }
+
+std::shared_ptr<Symbol> CFG::add_parameter(const std::string &name, Type type,
+                                           int line) {
+  bool new_symbol = add_symbol(name, type, line);
+  if (!new_symbol) {
+    VisitorErrorListener::addError(
+        "A parameter with name " + name + " has already been declared", line);
+  }
+  auto symbol = get_symbol(name);
+  parameterTypes.emplace_back(type, symbol);
+  return symbol;
+}
+
 int CFG::get_var_index(std::string name) {
   // TODO
   return 0;

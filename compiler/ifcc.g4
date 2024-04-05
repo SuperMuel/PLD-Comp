@@ -2,13 +2,16 @@ grammar ifcc;
 
 axiom : prog EOF ;
 
-prog : TYPE 'main' '(' ')' '{' stmt* return_stmt '}' ;
+prog : func+ ;
+
+func : TYPE ID '(' (TYPE ID (',' TYPE ID)*)? ')' block ;
 
 stmt : var_decl_stmt
      | var_assign_stmt
      | if_stmt
      | while_stmt
      | block
+     | expr ';'
      | return_stmt;
 
 var_decl_stmt : TYPE var_decl_member (',' var_decl_member)* ';';
@@ -23,6 +26,7 @@ block: '{' stmt* '}';
 
 expr : '(' expr ')' #par
      | op=('-'|'~'|'!'|'++'|'--'|'+') expr #unaryOp
+     | ID '(' (expr (',' expr)*)? ')' #func_call
      | expr op=('*' | '/' | '%') expr #multdiv
      | expr op=('+' | '-') expr #addsub
      | expr op=('<' | '<=' | '>' | '>=') expr #cmp
@@ -33,9 +37,9 @@ expr : '(' expr ')' #par
      | (INTEGER_LITERAL | CHAR_LITERAL | ID) #val
      ;
 
-return_stmt: RETURN expr ';' ;
+return_stmt: RETURN (expr)? ';' ;
 
-TYPE : INT | CHAR ;
+TYPE : INT | CHAR | VOID ;
 
 // Types
 INT : 'int' ;

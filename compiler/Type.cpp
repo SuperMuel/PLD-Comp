@@ -6,6 +6,8 @@ unsigned int getSize(Type t) {
     return 4;
   case Type::CHAR:
     return 1;
+  case Type::VOID:
+    return 0;
   }
   return 0;
 }

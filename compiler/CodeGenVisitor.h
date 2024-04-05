@@ -2,10 +2,11 @@
 
 #include "ParserRuleContext.h"
 #include "Symbol.h"
-#include "VisitorErrorListener.h"
 #include "antlr4-runtime.h"
 #include "generated/ifccBaseVisitor.h"
 #include "ir.h"
+#include <map>
+#include <memory>
 
 class CodeGenVisitor : public ifccBaseVisitor {
 public:
@@ -14,6 +15,8 @@ public:
 
   virtual antlrcpp::Any visitAxiom(ifccParser::AxiomContext *ctx) override;
   virtual antlrcpp::Any visitProg(ifccParser::ProgContext *ctx) override;
+
+  virtual antlrcpp::Any visitFunc(ifccParser::FuncContext *ctx) override;
 
   virtual antlrcpp::Any
   visitReturn_stmt(ifccParser::Return_stmtContext *ctx) override;
@@ -35,6 +38,9 @@ public:
 
   virtual antlrcpp::Any visitBlock(ifccParser::BlockContext *ctx) override;
 
+  virtual antlrcpp::Any
+  visitFunc_call(ifccParser::Func_callContext *ctx) override;
+
   virtual antlrcpp::Any visitMultdiv(ifccParser::MultdivContext *ctx) override;
 
   virtual antlrcpp::Any visitAddsub(ifccParser::AddsubContext *ctx) override;
@@ -45,8 +51,6 @@ public:
 
   virtual antlrcpp::Any visitVal(ifccParser::ValContext *ctx) override;
 
-  inline CFG *const getCfg() { return &cfg; };
-
   virtual antlrcpp::Any visitB_and(ifccParser::B_andContext *ctx) override;
 
   virtual antlrcpp::Any visitB_or(ifccParser::B_orContext *ctx) override;
@@ -55,10 +59,20 @@ public:
 
   virtual antlrcpp::Any visitUnaryOp(ifccParser::UnaryOpContext *ctx) override;
 
+  const std::vector<std::shared_ptr<CFG>> &getCfgList() const {
+    return cfgList;
+  }
+
+  CFG *getFunction(const std::string &id) { return functions[id].get(); }
+
 private:
   // Keeps track of the label for the next jump
   int nextLabel = 1;
-  CFG cfg;
+
+  std::vector<std::shared_ptr<CFG>> cfgList;
+  std::map<std::string, std::shared_ptr<CFG>> functions;
+  std::shared_ptr<CFG> curCfg;
+
   std::stringstream assembly;
 
   bool addSymbol(antlr4::ParserRuleContext *ctx, const std::string &id,
