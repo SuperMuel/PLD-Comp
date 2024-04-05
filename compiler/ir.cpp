@@ -388,10 +388,19 @@ void IRInstr::handleBinaryOp(const std::string &op, std::ostream &os,
        << registers32[destRegister] << std::endl;
   } else {
     if (secondRegister != cfg->scratchRegister) {
-      os << "xchg %" << registers32[secondRegister] << ", %"
-         << registers32[firstRegister] << std::endl;
-      os << op << " %" << registers32[firstRegister] << ", %"
-         << registers32[destRegister] << std::endl;
+      if (firstRegister != cfg->scratchRegister) {
+        os << "movl %" << registers32[secondRegister] << ", %"
+           << registers32[cfg->scratchRegister] << "\n";
+        os << "movl %" << registers32[firstRegister] << ", %"
+           << registers32[destRegister] << "\n";
+        os << op << " %" << registers32[cfg->scratchRegister] << ", %"
+           << registers32[destRegister] << std::endl;
+      } else {
+        os << "xchg %" << registers32[secondRegister] << ", %"
+           << registers32[firstRegister] << std::endl;
+        os << op << " %" << registers32[firstRegister] << ", %"
+           << registers32[destRegister] << std::endl;
+      }
     } else {
       os << "movl -" << std::get<std::shared_ptr<Symbol>>(params[1])->offset
          << "(%rbp), %" << registers32[secondRegister] << std::endl;
