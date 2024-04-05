@@ -35,26 +35,29 @@ antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
   return 0;
 }
 
-antlrcpp::Any CodeGenVisitor::visitVar_decl_stmt(ifccParser::Var_decl_stmtContext* ctx) {
-    Type type;
-    if (ctx->TYPE()->toString() == "int") {
-        type = Type::INT;
-    } else if (ctx->TYPE()->toString() == "char") {
-        type = Type::CHAR;
-    }
-    // Iterate over each var_decl_member
-    for (auto& memberCtx : ctx->var_decl_member()) {
-        std::string varName = memberCtx->ID()->toString();
-        addSymbol(memberCtx, varName, type); // Declare the variable
+antlrcpp::Any
+CodeGenVisitor::visitVar_decl_stmt(ifccParser::Var_decl_stmtContext *ctx) {
+  Type type;
+  if (ctx->TYPE()->toString() == "int") {
+    type = Type::INT;
+  } else if (ctx->TYPE()->toString() == "char") {
+    type = Type::CHAR;
+  }
+  // Iterate over each var_decl_member
+  for (auto &memberCtx : ctx->var_decl_member()) {
+    std::string varName = memberCtx->ID()->toString();
+    addSymbol(memberCtx, varName, type); // Declare the variable
 
-        if (memberCtx->expr()) { // Check for initialization
-            std::shared_ptr<Symbol> symbol = getSymbol(memberCtx, varName);
-            std::shared_ptr<Symbol> source = visit(memberCtx->expr()).as<std::shared_ptr<Symbol>>();
-            cfg.current_bb->add_IRInstr(IRInstr::var_assign, Type::INT, {symbol, source});
-        }
+    if (memberCtx->expr()) { // Check for initialization
+      std::shared_ptr<Symbol> symbol = getSymbol(memberCtx, varName);
+      std::shared_ptr<Symbol> source =
+          visit(memberCtx->expr()).as<std::shared_ptr<Symbol>>();
+      cfg.current_bb->add_IRInstr(IRInstr::var_assign, Type::INT,
+                                  {symbol, source});
     }
+  }
 
-    return 0;
+  return 0;
 }
 
 antlrcpp::Any
@@ -319,29 +322,26 @@ antlrcpp::Any CodeGenVisitor::visitB_xor(ifccParser::B_xorContext *ctx) {
 }
 
 antlrcpp::Any CodeGenVisitor::visitUnaryOp(ifccParser::UnaryOpContext *ctx) {
-    std::shared_ptr<Symbol> val = visit(ctx->expr()).as<std::shared_ptr<Symbol>>();
-    IRInstr::Operation instr;
-    if (ctx->op->getText() == "-") {
-        instr = IRInstr::neg;
-        cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
-        return val;
-    } else if (ctx->op->getText() == "~") {
-        instr = IRInstr::not_;
-        cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
-        return val;
-    } else if (ctx->op->getText() == "!") {
-        instr = IRInstr::lnot;
-        cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
-        return val;
-    } else if (ctx->op->getText() == "++") {
-        instr = IRInstr::inc;
-        cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
-        return val;
-    } else if(ctx->op->getText() == "--") {
-        instr = IRInstr::dec;
-        cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
-        return val;
-    } else if (ctx->op->getText() == "+") {
-        return val;
-    }
+  std::shared_ptr<Symbol> val =
+      visit(ctx->expr()).as<std::shared_ptr<Symbol>>();
+  IRInstr::Operation instr;
+  if (ctx->op->getText() == "-") {
+    instr = IRInstr::neg;
+    return cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
+  } else if (ctx->op->getText() == "~") {
+    instr = IRInstr::not_;
+    return cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
+  } else if (ctx->op->getText() == "!") {
+    instr = IRInstr::lnot;
+    return cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
+  } else if (ctx->op->getText() == "++") {
+    instr = IRInstr::inc;
+    return cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
+  } else if (ctx->op->getText() == "--") {
+    instr = IRInstr::dec;
+    return cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
+  } else if (ctx->op->getText() == "+") {
+    return val;
+  }
+  return nullptr;
 }
