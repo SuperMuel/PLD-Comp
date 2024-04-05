@@ -25,6 +25,7 @@ from typing import List
 def print_green(text):
     print("\033[92m" + text + "\033[0m")
 
+
 def print_red(text):
     print("\033[91m" + text + "\033[0m")
 
@@ -59,16 +60,21 @@ def parse_args() -> argparse.Namespace:
         epilog=""
     )
 
-    argparser.add_argument('input', metavar='PATH', nargs='+', help='For each path given:'
+    default_input = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'testfiles/passing'))
+    argparser.add_argument('input', metavar='PATH', nargs='*', help='For each path given:'
                                                                     + ' if it\'s a file, use this file;'
-                                                                    + ' if it\'s a directory, use all *.c files in this subtree')
+                                                                    + ' if it\'s a directory, use all *.c files in this subtree'
+                                                                    + f' ( default is {default_input} )',
+                           default=[default_input])
 
+    default_ifcc_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../compiler/ifcc'))
+
+    argparser.add_argument('--ifcc_path', metavar='PATH', default=default_ifcc_path,
+                           help=f'Path to the ifcc executable. Default is {default_ifcc_path}')
     argparser.add_argument('-d', '--debug', action="count", default=0,
                            help='Increase quantity of debugging messages (only useful to debug the test script itself)')
     argparser.add_argument('-v', '--verbose', action="count", default=0,
                            help='Increase verbosity level. You can use this option multiple times.')
-    argparser.add_argument('-w', '--wrapper', metavar='PATH',
-                           help='Invoke your compiler through the shell script at PATH. (default: `ifcc-wrapper.sh`)')
     return argparser.parse_args()
 
 
@@ -105,28 +111,6 @@ def check_files_can_be_read(files: List[str]) -> None:
         except Exception as e:
             print_red(f"error: Unable to read file {file}: {e}")
             sys.exit(1)
-
-
-def get_wrapper_path(args: argparse.Namespace) -> str:
-    """return the path to the wrapper script"""
-    if args.wrapper:
-        wrapper = os.path.realpath(os.getcwd() + "/" + args.wrapper)
-    else:
-        wrapper = os.path.dirname(
-            os.path.realpath(__file__)) + "/ifcc-wrapper.sh"  # TODO: set this directily in the argparse default
-
-    if not os.path.isfile(wrapper):
-        print_red("error: cannot find " + os.path.basename(wrapper) + " in directory: " + os.path.dirname(wrapper))
-        sys.exit(1)
-
-    return wrapper
-
-
-def check_wrapper_can_be_executed(wrapper: str) -> None:
-    """check that the wrapper script can be executed"""
-    if not os.access(wrapper, os.X_OK):
-        print_red(f"error: {wrapper} is not executable")
-        sys.exit(1)
 
 
 ######################################################################################
@@ -173,7 +157,7 @@ def prepare_test_cases(input_filenames: list, output_dir: str, debug: bool) -> l
     return unique_jobs
 
 
-def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bool:
+def run_test_case(jobname: str, orig_cwd: str, ifcc_path: str, verbose: int) -> bool:
     os.chdir(orig_cwd)
 
     print('TEST-CASE: ' + jobname)
@@ -190,7 +174,7 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bo
             dumpfile("gcc-execute.txt")
 
     ## IFCC compiler
-    ifccstatus = command(wrapper + " asm-ifcc.s input.c", "ifcc-compile.txt")
+    ifccstatus = command(f"{ifcc_path}  input.c >> asm-ifcc.s", "ifcc-compile.txt")
 
     if gccstatus != 0 and ifccstatus != 0:
         ## ifcc correctly rejects invalid program -> test-case ok
@@ -220,11 +204,11 @@ def run_test_case(jobname: str, orig_cwd: str, wrapper: str, verbose: int) -> bo
 
     command("./exe-ifcc", "ifcc-execute.txt")
     if open("gcc-execute.txt").read() != open("ifcc-execute.txt").read():
-        print("TEST FAIL (different results at execution)")
+        print_red("TEST FAIL (different results at execution)")
         if args.verbose:
-            print("GCC:")
+            print_red("GCC:")
             dumpfile("gcc-execute.txt")
-            print("you:")
+            print_red("you:")
             dumpfile("ifcc-execute.txt")
         return False
 
@@ -238,6 +222,14 @@ if __name__ == "__main__":
 
     if args.debug >= 2:
         print('debug: command-line arguments ' + str(args))
+
+    ifcc_path = os.path.abspath(args.ifcc_path)
+
+    if not os.path.isfile(ifcc_path):
+        print_red(f'error: ifcc executable not found at {ifcc_path}')
+        sys.exit(1)
+
+    print(f'Using ifcc executable at {ifcc_path}')
 
     orig_cwd = os.getcwd()
 
@@ -268,19 +260,9 @@ if __name__ == "__main__":
     ## fail as early as possible when the CLI arguments are wrong.
     check_files_can_be_read(inputfilenames)
 
-    ## Last but not least: we now locate the "wrapper script" that we will
-    ## use to invoke ifcc
-    wrapper = get_wrapper_path(args)
-
-    ## and we check that it is executable
-    check_wrapper_can_be_executed(wrapper)
-
-    if args.debug:
-        print("debug: wrapper path: " + wrapper)
-
     jobs = prepare_test_cases(inputfilenames, IFCC_TEST_OUTPUT, args.debug)
 
-    test_results = [run_test_case(job, orig_cwd, wrapper, args.verbose) for job in jobs]
+    test_results = [run_test_case(job, orig_cwd, ifcc_path, verbose=args.verbose) for job in jobs]
 
     # If any test fails (False in test_results), exit with status code 1. Otherwise, exit with 0.
     if not all(test_results):
