@@ -48,6 +48,8 @@ public:
     gt,
     eq,
     neq,
+    neg,
+    not_
   } Operation;
 
   /**  constructor */
@@ -72,7 +74,7 @@ private:
   void handleVar_assign(std::ostream &os, CFG *cfg);
   void handleLdconst(std::ostream &os, CFG *cfg);
   void handleLdvar(std::ostream &os, CFG *cfg);
-
+  void handleUnaryOp(const std::string &op, std::ostream &os, CFG *cfg);
   void handleBinaryOp(const std::string &op, std::ostream &os, CFG *cfg);
   void handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg);
 };
