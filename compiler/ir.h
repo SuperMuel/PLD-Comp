@@ -58,6 +58,10 @@ public:
 
   friend std::ostream &operator<<(std::ostream &os, IRInstr &instruction);
 
+  // Helper functions for register allocation
+  std::set<std::shared_ptr<Symbol>> getUsedVariables();
+  std::set<std::shared_ptr<Symbol>> getDeclaredVariable();
+
 private:
   Type outType;
   std::vector<Parameter> params;
@@ -75,14 +79,15 @@ private:
 
   void handleBinaryOp(const std::string &op, std::ostream &os, CFG *cfg);
   void handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg);
+
+  int findRegister(std::shared_ptr<Symbol> &param, CFG *cfg, std::ostream &os);
 };
 
 class BasicBlock {
 public:
   BasicBlock(CFG *cfg, std::string entry_label);
-  void gen_asm(std::ostream &
-                   o); /**< x86 assembly code generation for this
-                                                    basic block (very simple) */
+  void gen_asm(std::ostream &o); /**< x86 assembly code
+                             generation for this basic block (very simple) */
   std::shared_ptr<Symbol> add_IRInstr(IRInstr::Operation op, Type t,
                                       std::vector<Parameter> params);
 
@@ -108,6 +113,16 @@ public:
                              variable     that holds the value of expr */
 };
 
+struct LivenessInfo {
+  std::map<IRInstr *, std::set<std::shared_ptr<Symbol>>> liveIn;
+  std::map<IRInstr *, std::set<std::shared_ptr<Symbol>>> liveOut;
+};
+
+struct spillInformation {
+  std::stack<std::shared_ptr<Symbol>> colorOrder;
+  std::set<std::shared_ptr<Symbol>> spilledVariables;
+};
+
 class CFG {
 public:
   ~CFG();
@@ -130,15 +145,17 @@ public:
   // basic block management
   std::string new_BB_name();
   BasicBlock *current_bb;
+  static const int scratchRegister = 7;
 
   inline void push_table() { symbolTables.push_front(SymbolTable()); }
   void pop_table();
 
   bool add_symbol(std::string id, Type t, int line);
   std::shared_ptr<Symbol> get_symbol(const std::string &name);
+  std::map<std::shared_ptr<Symbol>, int> registerAssignment;
 
   // Index of the free register with smallest index
-  int freeRegister;
+  // int freeRegister;
 
 protected:
   unsigned int
@@ -148,4 +165,23 @@ protected:
   std::vector<BasicBlock *> bbs; /**< all the basic blocks of this CFG*/
 
   std::list<SymbolTable> symbolTables;
+
+  void computeRegisterAllocation();
+
+  LivenessInfo computeLiveInfo();
+
+  spillInformation findColorOrder(
+      std::map<std::shared_ptr<Symbol>, std::vector<std::shared_ptr<Symbol>>>
+          &interferenceGraph,
+      int registerCount);
+
+  std::map<std::shared_ptr<Symbol>, std::vector<std::shared_ptr<Symbol>>>
+
+  buildInterferenceGraph(LivenessInfo &liveInfo);
+
+  std::map<std::shared_ptr<Symbol>, int> assignRegisters(
+      spillInformation &spillInfo,
+      std::map<std::shared_ptr<Symbol>, std::vector<std::shared_ptr<Symbol>>>
+          &interferenceGraph,
+      int registerCount);
 };
