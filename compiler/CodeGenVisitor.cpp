@@ -181,49 +181,90 @@ antlrcpp::Any CodeGenVisitor::visitVal(ifccParser::ValContext *ctx) {
   return source;
 }
 
+
 antlrcpp::Any CodeGenVisitor::visitUnaryOp(ifccParser::UnaryOpContext *ctx) {
     std::string val = visit(ctx->expr()).as<std::string>();
     IRInstr::Operation instr;
 
     if (ctx->op->getText() == "++") {
-        instr = IRInstr::inc;
+        instr = IRInstr::Operation::inc;
+
+        if (ctx->expr()->getText().find("=") != std::string::npos) {
+            // Case: y = ++x
+            std::string varName = ctx->expr()->getText();
+            std::string tempVar = cfg.create_new_tempvar(Type::INT);
+            cfg.current_bb->add_IRInstr(IRInstr::inc, Type::INT, {varName}, &cfg);
+            cfg.current_bb->add_IRInstr(IRInstr::ldvar, Type::INT, {varName, tempVar}, &cfg);
+            return tempVar;
+        } else {
+            // Case: ++x
+            cfg.current_bb->add_IRInstr(instr, Type::INT, {ctx->expr()->getText()}, &cfg);
+            return ctx->expr()->getText();
+        }
     } else if (ctx->op->getText() == "--") {
-        instr = IRInstr::dec;
-    } else if (ctx->op->getText() == "+") {
-        instr = IRInstr::pos;
+        instr = IRInstr::Operation::dec;
+        if (ctx->expr()->getText().find("=") != std::string::npos) {
+            // Case: y = --x
+            cfg.current_bb->add_IRInstr(instr, Type::INT, {ctx->expr()->getText()}, &cfg);
+            return ctx->expr()->getText();
+        } else {
+            // Case: --x
+            cfg.current_bb->add_IRInstr(instr, Type::INT, {ctx->expr()->getText()}, &cfg);
+            return ctx->expr()->getText();
+        }
+    } 
+    
+    else if (ctx->op->getText() == "+") {
+        instr = IRInstr::Operation::pos;
+        cfg.current_bb->add_IRInstr(instr, Type::INT, {val}, &cfg);
+        return val;
     } else if (ctx->op->getText() == "-") {
-        instr = IRInstr::neg;
+        instr = IRInstr::Operation::neg;
+        cfg.current_bb->add_IRInstr(instr, Type::INT, {val}, &cfg);
+        return val;
     } else if (ctx->op->getText() == "!") {
-        instr = IRInstr::lnot;
+        instr = IRInstr::Operation::lnot;
+        cfg.current_bb->add_IRInstr(instr, Type::INT, {val}, &cfg);
+        return val;
     } else if (ctx->op->getText() == "~") {
-        instr = IRInstr::not_;
+        instr = IRInstr::Operation::not_;
+        cfg.current_bb->add_IRInstr(instr, Type::INT, {val}, &cfg);
+        return val;
     } else {
         std::string error = "Opérateur unaire non pris en charge: " + ctx->op->getText();
         errorListener.addError(ctx, error, ErrorType::Error);
-        instr = IRInstr::pos; //ne rien faire
+        instr = IRInstr::Operation::pos; //ne rien faire
+        cfg.current_bb->add_IRInstr(instr, Type::INT, {val}, &cfg);
+        return val;
     }
-    /*
-    if (ctx->op->getType() == ifccParser::INC) { //ctx->op->getText() == "++"
-        instr = IRInstr::inc;
-    } else if (ctx->op->getType() == ifccParser::DEC) { 
-        instr = IRInstr::dec;
-    } else if (ctx->op->getType() == ifccParser::PLUS) { 
-        instr = IRInstr::pos;
-    } else if (ctx->op->getType() == ifccParser::MINUS) { 
-        instr = IRInstr::neg;
-    } else if (ctx->op->getType() == ifccParser::BANG) { 
-        instr = IRInstr::lnot;
-    } else if (ctx->op->getType() == ifccParser::TILDE) { 
-        instr = IRInstr::not_;
+}
+
+
+/*
+antlrcpp::Any CodeGenVisitor::visitUnaryOp(ifccParser::UnaryOpContext *ctx) {
+    std::string val = visit(ctx->expr()).as<std::string>();
+    IRInstr::Operation instr;
+
+    if (ctx->op->getText() == "++") {
+        instr = IRInstr::Operation::inc;
+    } else if (ctx->op->getText() == "--") {
+        instr = IRInstr::Operation::dec;
+    } else if (ctx->op->getText() == "+") {
+        instr = IRInstr::Operation::pos;
+    } else if (ctx->op->getText() == "-") {
+        instr = IRInstr::Operation::neg;
+    } else if (ctx->op->getText() == "!") {
+        instr = IRInstr::Operation::lnot;
+    } else if (ctx->op->getText() == "~") {
+        instr = IRInstr::Operation::not_;
     } else {
         std::string error = "Opérateur unaire non pris en charge: " + ctx->op->getText();
         errorListener.addError(ctx, error, ErrorType::Error);
-        instr = IRInstr::pos; //ne rien faire
+        instr = IRInstr::Operation::pos; //ne rien faire
     }
-    */
     cfg.current_bb->add_IRInstr(instr, Type::INT, {val}, &cfg);    
     return val;
-}
+}*/
 
 
 bool CodeGenVisitor::addSymbol(antlr4::ParserRuleContext *ctx,

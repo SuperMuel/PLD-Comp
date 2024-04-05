@@ -117,33 +117,63 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
        << registers32[cfg->freeRegister] << std::endl;
     cfg->freeRegister++;
     break;
-  // or use registers32[cfg->freeRegister -1]
+    
+
   case inc:
-    os << "incl %" << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
-    break;
+      os << "movl -" << cfg->symbolTable[params[0]]->offset << "(%rbp), %" << registers32[cfg->freeRegister] << std::endl;
+      os << "incl %" << registers32[cfg->freeRegister - 1] << std::endl;
+      cfg->freeRegister++;
+      os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+          << cfg->symbolTable[params[0]]->offset << "(%rbp)" << std::endl;
+      break;
   case dec:
-    os << "decl %" << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
-    break;
+      os << "movl -" << cfg->symbolTable[params[0]]->offset << "(%rbp), %" << registers32[cfg->freeRegister] << std::endl;
+      os << "decl %" << registers32[cfg->freeRegister - 1] << std::endl;
+      os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+          << cfg->symbolTable[params[0]]->offset << "(%rbp)" << std::endl;
+      break;
+
   case pos:
-    break;
+      break;
   case neg:
-    /*os << "testl %" << registers32[cfg->freeRegister] << ", %"
-       << registers32[cfg->freeRegister] << std::endl;
-    os << "setne %al" << std::endl;
-    os << "movzbl %al, %" << registers32[cfg->freeRegister] << std::endl;*/
-    os << "negl %" << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
-    break;
+      os << "negl %" << registers32[cfg->freeRegister - 1] << std::endl;
+      os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+          << cfg->symbolTable[params[0]]->offset << "(%rbp)" << std::endl;
+      break;
   case not_:
-    os << "notl %" << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;
-    break;
+      os << "notl %" << registers32[cfg->freeRegister - 1] << std::endl;
+      os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+          << cfg->symbolTable[params[0]]->offset << "(%rbp)" << std::endl;
+      break;
   case lnot:
-    os << "xorl $1, %" << registers32[cfg->freeRegister] << std::endl;
-    cfg->freeRegister++;    
-    break;
+      os << "xorl $1, %" << registers32[cfg->freeRegister - 1] << std::endl;
+      os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+          << cfg->symbolTable[params[0]]->offset << "(%rbp)" << std::endl;
+      break;
+
+  /*case inc:
+      os << "incl %" << registers32[cfg->freeRegister - 1] << std::endl;
+      //os << "movl %" << registers32[cfg->freeRegister -1] << ", -"
+      //<< cfg->symbolTable[params[0]]->offset << "(%rbp)" << std::endl;
+      break;
+  case dec:
+      os << "decl %" << registers32[cfg->freeRegister - 1] << std::endl;
+      //cfg->freeRegister++;
+      break;
+  case pos:
+      break;
+  case neg:
+      os << "negl %" << registers32[cfg->freeRegister - 1] << std::endl;
+      //cfg->freeRegister++;
+      break;
+  case not_:
+      os << "notl %" << registers32[cfg->freeRegister - 1] << std::endl;
+      //cfg->freeRegister++;
+      break;
+  case lnot:
+      os << "xorl $1, %" << registers32[cfg->freeRegister - 1] << std::endl;
+      //cfg->freeRegister++;
+      break;*/
   }
 }
 
