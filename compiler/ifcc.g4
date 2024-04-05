@@ -77,6 +77,7 @@ INTEGER_LITERAL : [0-9]+ ;
 CHAR_LITERAL : '\'' . '\'' ;
 
 COMMENT : '/*' .*? '*/' -> skip ;
+INLINE_COMMENT : '//' ~[\r\n]* -> skip ;
 DIRECTIVE : '#' .*? '\n' -> skip ;
 WS    : [ \t\r\n] -> channel(HIDDEN);
 ID : [a-zA-Z_][a-zA-Z_0-9]* ;
