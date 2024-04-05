@@ -47,6 +47,9 @@ int main(int argn, const char **argv) {
 
   auto cfgList = v.getCfgList();
   for (auto cfg : cfgList) {
+    if (cfg->get_name() == "putchar" || cfg->get_name() == "getchar") {
+      continue;
+    }
     cfg->gen_asm(std::cout);
     std::cerr << cfg->get_name() << std::endl;
     for (auto block : cfg->getBlocks()) {

@@ -629,6 +629,9 @@ void IRInstr::handleCall(std::ostream &os, CFG *cfg) {
        << "(%rbp)" << std::endl;
   }
 
+  for (int i = 7; i <= paramNum; i++) {
+    os << "popq %" << registers64[cfg->scratchRegister] << std::endl;
+  }
   if (paramNum > 4) {
     if (paramNum > 5) {
       os << "popq %r9" << std::endl;
@@ -636,9 +639,6 @@ void IRInstr::handleCall(std::ostream &os, CFG *cfg) {
     os << "popq %r8" << std::endl;
     os << "addq $" << (cfg->nextFreeSymbolIndex + 15) / 16 * 16 << ", %rsp"
        << std::endl;
-  }
-  for (int i = 7; i <= paramNum; i++) {
-    os << "popq %" << registers64[cfg->scratchRegister] << std::endl;
   }
 
   if (outType != Type::VOID && paramRegister != cfg->scratchRegister) {
@@ -716,6 +716,7 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
     } else {
       instrs.emplace_back(this, op, t, params);
     }
+    break;
   }
   case IRInstr::ret:
   case IRInstr::param:
@@ -744,8 +745,10 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   return nullptr;
 }
 
-CFG::CFG(Type type, const std::string &name, CodeGenVisitor *visitor)
-    : nextFreeSymbolIndex(1), name(name), returnType(type), visitor(visitor) {
+CFG::CFG(Type type, const std::string &name, int argCount,
+         CodeGenVisitor *visitor)
+    : nextFreeSymbolIndex(1 + 4 * std::max(0, argCount - 6)), name(name),
+      returnType(type), visitor(visitor) {
   add_bb(new BasicBlock(this, ""));
   push_table();
 }
@@ -780,14 +783,37 @@ void CFG::gen_asm_prologue(std::ostream &o) {
   o << "pushq %rbp\n";
   o << "movq %rsp, %rbp\n";
 
-  for (int i = parameterTypes.size() - 1; i >= 0; i--) {
+  bool isSwapped = false;
+  if (parameterTypes.size() >= 6) {
+    int parameterRegister1 = findRegister(parameterTypes[4].symbol);
+    int parameterRegister2 = findRegister(parameterTypes[4].symbol);
+    if (parameterRegister1 == 5 && parameterRegister2 == 4) {
+      o << "xchg %r8d, %r9d" << std::endl;
+    }
+  }
+
+  for (int i = 4; !isSwapped && i < std::min((int)parameterTypes.size(), 6);
+       i++) {
+    auto parameter = parameterTypes[i];
+    int parameterRegister = findRegister(parameter.symbol);
+    o << "movl %" << paramRegisters[i] << ", %"
+      << registers32[parameterRegister] << std::endl;
+    if (parameterRegister == scratchRegister) {
+      o << "movl %" << registers32[parameterRegister] << ", -"
+        << parameter.symbol->offset << "(%rbp)" << std::endl;
+    }
+  }
+  for (int i = 0; i < parameterTypes.size(); i++) {
+    if (i == 4 || i == 5) {
+      continue;
+    }
     auto parameter = parameterTypes[i];
     int parameterRegister = findRegister(parameter.symbol);
     if (i < 6) {
       o << "movl %" << paramRegisters[i] << ", %"
         << registers32[parameterRegister] << std::endl;
     } else {
-      o << "movl -" << 4 * (i - 5) << "(%rbp)"
+      o << "movl " << 8 * (i - 4) << "(%rbp)"
         << ", %" << registers32[parameterRegister] << std::endl;
     }
     if (parameterRegister == scratchRegister) {

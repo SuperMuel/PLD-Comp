@@ -4,11 +4,25 @@
 #include "ir.h"
 #include "support/Any.h"
 
+#include <memory>
 #include <string>
 
 using namespace std;
 
-CodeGenVisitor::CodeGenVisitor() {}
+CodeGenVisitor::CodeGenVisitor() {
+  std::shared_ptr<CFG> getchar =
+      std::make_shared<CFG>(Type::INT, "getchar", 0, this);
+
+  std::shared_ptr<CFG> putchar =
+      std::make_shared<CFG>(Type::INT, "putchar", 0, this);
+  auto symbol = putchar->add_parameter("c", Type::INT, 0);
+  symbol->used = true;
+
+  cfgList.push_back(getchar);
+  functions["getchar"] = getchar;
+  cfgList.push_back(putchar);
+  functions["putchar"] = putchar;
+}
 
 antlrcpp::Any CodeGenVisitor::visitAxiom(ifccParser::AxiomContext *ctx) {
   return visit(ctx->prog());
@@ -24,7 +38,9 @@ antlrcpp::Any CodeGenVisitor::visitProg(ifccParser::ProgContext *ctx) {
     } else if (func->TYPE(0)->toString() == "void") {
       type = Type::VOID;
     }
-    curCfg = std::make_shared<CFG>(type, func->ID(0)->toString(), this);
+    int argCount = func->ID().size() - 1;
+    curCfg =
+        std::make_shared<CFG>(type, func->ID(0)->toString(), argCount, this);
     cfgList.push_back(curCfg);
     functions[func->ID(0)->toString()] = curCfg;
     visit(func);

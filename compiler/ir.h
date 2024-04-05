@@ -150,7 +150,8 @@ struct spillInformation {
 class CFG {
 public:
   ~CFG();
-  CFG(Type type, const std::string &name, CodeGenVisitor *visitor);
+  CFG(Type type, const std::string &name, int argCount,
+      CodeGenVisitor *visitor);
 
   void add_bb(BasicBlock *bb);
   inline std::vector<BasicBlock *> &getBlocks() { return bbs; };
