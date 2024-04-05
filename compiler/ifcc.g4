@@ -2,12 +2,13 @@ grammar ifcc;
 
 axiom : prog EOF ;
 
-prog : 'int' 'main' '(' ')' '{' stmt* return_stmt '}' ;
+prog : TYPE 'main' '(' ')' '{' stmt* return_stmt '}' ;
 
 stmt : var_decl_stmt
      | var_assign_stmt
      | if_stmt
      | while_stmt
+     | block
      | return_stmt;
 
 var_decl_stmt : TYPE ID ';' ;
@@ -20,21 +21,22 @@ while_stmt: WHILE '(' expr ')' block;
 block: '{' stmt* '}';
 
 expr : '(' expr ')' #par
-     |  expr op=('*' | '/') expr #multdiv
+     |  expr op=('*' | '/' | '%') expr #multdiv
      | expr op=('+' | '-') expr #addsub
      | expr op=('<' | '<=' | '>' | '>=') expr #cmp
      | expr op=('==' | '!=') expr #eq
      | expr '&' expr #b_and
      | expr '^' expr #b_xor
      | expr '|' expr #b_or
-     | (INTEGER_LITERAL | ID) #val
+     | (INTEGER_LITERAL | CHAR_LITERAL | ID) #val
      ;
 
 return_stmt: RETURN expr ';' ;
 
-TYPE : 'int' ;
+TYPE : INT | CHAR ;
 
 // Types
+INT : 'int' ;
 CHAR : 'char' ;
 DOUBLE : 'double' ;
 LONG : 'long' ;
@@ -72,6 +74,7 @@ WHILE : 'while' ;
 CONST : 'const' ;
 
 INTEGER_LITERAL : [0-9]+ ;
+CHAR_LITERAL : '\'' . '\'' ;
 
 COMMENT : '/*' .*? '*/' -> skip ;
 DIRECTIVE : '#' .*? '\n' -> skip ;

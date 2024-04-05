@@ -6,14 +6,15 @@ enum class ErrorType { Error, Warning };
 
 class VisitorErrorListener {
 public:
-  VisitorErrorListener();
-  inline bool hasError() const { return mHasError; }
-  virtual void addError(antlr4::ParserRuleContext *ctx,
-                        const std::string &message,
-                        ErrorType errorType = ErrorType::Error);
-  virtual void addError(const std::string &message,
-                        ErrorType errorType = ErrorType::Error);
+  static inline bool hasError() { return mHasError; }
+  static void addError(antlr4::ParserRuleContext *ctx,
+                       const std::string &message,
+                       ErrorType errorType = ErrorType::Error);
+  static void addError(const std::string &message, int line,
+                       ErrorType errorType = ErrorType::Error);
+  static void addError(const std::string &message,
+                       ErrorType errorType = ErrorType::Error);
 
 protected:
-  bool mHasError;
+  static bool mHasError;
 };
