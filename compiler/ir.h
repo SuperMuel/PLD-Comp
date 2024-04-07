@@ -51,7 +51,8 @@ public:
     neg,
     not_,
     lnot, 
-    inc
+    inc, 
+    dec
   } Operation;
 
   /**  constructor */

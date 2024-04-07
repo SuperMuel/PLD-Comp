@@ -93,6 +93,9 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
   case inc:
     handleUnaryOp("inc", os, cfg);
     break;
+  case dec:
+    handleUnaryOp("dec", os, cfg);
+    break;
   }
 }
 
@@ -180,6 +183,9 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
     break;
   case IRInstr::inc:
     os << "++" << instruction.params[0];
+    break;
+  case IRInstr::dec:
+    os << "--" << instruction.params[0];
     break;
   }
   return os;
@@ -282,12 +288,15 @@ void IRInstr::handleUnaryOp(const std::string &op, std::ostream &os, CFG *cfg) {
        << registers32[cfg->freeRegister - 1] << std::endl;
     os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
        << symbol->offset << "(%rbp)" << std::endl;
-    } else if (op == "inc"){
+  } else if (op == "inc"){
     os << "incl %" << registers32[cfg->freeRegister - 1] << std::endl;
     os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
-        << symbol->offset << "(%rbp)" << std::endl;
-    } 
-    else {
+      << symbol->offset << "(%rbp)" << std::endl;
+  } else if (op == "dec"){
+    os << "decl %" << registers32[cfg->freeRegister - 1] << std::endl;
+    os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+      << symbol->offset << "(%rbp)" << std::endl;
+  } else {
     assert("Invalid unary operation");
   }
 }
@@ -345,6 +354,7 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::neg:  
   case IRInstr::lnot:
   case IRInstr::inc:
+  case IRInstr::dec:
   {
     std::shared_ptr<Symbol> symbol = cfg->create_new_tempvar(t);
     params.push_back(symbol);
