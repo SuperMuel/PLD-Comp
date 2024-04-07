@@ -21,8 +21,8 @@ while_stmt: WHILE '(' expr ')' block;
 block: '{' stmt* '}';
 
 expr : '(' expr ')' #par
-     | op=('-'|'~') expr #unaryOp
-     |  expr op=('*' | '/' | '%') expr #multdiv
+     | op=('-'|'~'|'!') expr #unaryOp
+     | expr op=('*' | '/' | '%') expr #multdiv
      | expr op=('+' | '-') expr #addsub
      | expr op=('<' | '<=' | '>' | '>=') expr #cmp
      | expr op=('==' | '!=') expr #eq

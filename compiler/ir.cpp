@@ -87,6 +87,9 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
   case not_:
     handleUnaryOp("not_", os, cfg);
     break;
+  case lnot:
+    handleUnaryOp("lnot", os, cfg);
+    break;
   }
 }
 
@@ -168,6 +171,9 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
     break;
   case IRInstr::not_:
     os << " ~ " << instruction.params[0];
+    break;
+  case IRInstr::lnot:
+    os << "! " << instruction.params[0];
     break;
   }
   return os;
@@ -263,6 +269,15 @@ void IRInstr::handleUnaryOp(const std::string &op, std::ostream &os, CFG *cfg) {
     os << "notl %" << registers32[cfg->freeRegister - 1] << std::endl;
     os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
         << symbol->offset << "(%rbp)" << std::endl;
+  } else if (op=="lnot"){
+    os << "cmpl $0, %" << registers32[cfg->freeRegister - 1] << std::endl;
+    os << "sete %" << registers8[cfg->freeRegister - 1] << std::endl;
+    os << "movzbl %" << registers8[cfg->freeRegister - 1] << ", %"
+       << registers32[cfg->freeRegister - 1] << std::endl;
+    os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+       << symbol->offset << "(%rbp)" << std::endl;
+    } else {
+    assert("Invalid unary operation");
   }
 }
 
@@ -317,6 +332,7 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::ldconst: 
   case IRInstr::not_:
   case IRInstr::neg:  
+  case IRInstr::lnot:
   {
     std::shared_ptr<Symbol> symbol = cfg->create_new_tempvar(t);
     params.push_back(symbol);
