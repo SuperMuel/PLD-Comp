@@ -50,7 +50,8 @@ public:
     neq,
     neg,
     not_,
-    lnot
+    lnot, 
+    inc
   } Operation;
 
   /**  constructor */

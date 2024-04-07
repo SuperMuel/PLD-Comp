@@ -323,5 +323,9 @@ antlrcpp::Any CodeGenVisitor::visitUnaryOp(ifccParser::UnaryOpContext *ctx) {
         instr = IRInstr::lnot;
         cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
         return val;
+    } else if (ctx->op->getText() == "++") {
+        instr = IRInstr::inc;
+        cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
+        return val;
     }
 }
