@@ -21,7 +21,7 @@ while_stmt: WHILE '(' expr ')' block;
 block: '{' stmt* '}';
 
 expr : '(' expr ')' #par
-     | op=('-'|'~'|'!'|'++'|'--') expr #unaryOp
+     | op=('-'|'~'|'!'|'++'|'--'|'+') expr #unaryOp
      | expr op=('*' | '/' | '%') expr #multdiv
      | expr op=('+' | '-') expr #addsub
      | expr op=('<' | '<=' | '>' | '>=') expr #cmp

@@ -96,6 +96,8 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
   case dec:
     handleUnaryOp("dec", os, cfg);
     break;
+  case nothing:
+    break;
   }
 }
 
@@ -186,6 +188,8 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
     break;
   case IRInstr::dec:
     os << "--" << instruction.params[0];
+    break;
+  case IRInstr::nothing:
     break;
   }
   return os;
@@ -355,6 +359,7 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::lnot:
   case IRInstr::inc:
   case IRInstr::dec:
+  case IRInstr::nothing:
   {
     std::shared_ptr<Symbol> symbol = cfg->create_new_tempvar(t);
     params.push_back(symbol);
