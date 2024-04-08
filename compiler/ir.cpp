@@ -4,6 +4,7 @@
 #include "VisitorErrorListener.h"
 #include <iostream>
 #include <memory>
+#include <queue>
 #include <string>
 
 std::ostream &operator<<(std::ostream &os, const Parameter &param) {
@@ -943,13 +944,29 @@ LivenessInfo CFG::computeLiveInfo() {
         if (instructionIndex + 1 < currentBB->instrs.size()) {
           nextInstrs.push_back(&currentBB->instrs[instructionIndex + 1]);
         } else {
-          if (currentBB->exit_true != nullptr &&
-              !currentBB->exit_true->instrs.empty()) {
-            nextInstrs.push_back(&currentBB->exit_true->instrs[0]);
+          // Perform a bfs on the next possible instruction
+          std::set<BasicBlock *> bfsBB;
+          std::queue<BasicBlock *> visitOrder;
+          if (currentBB->exit_true != nullptr) {
+            visitOrder.push(currentBB->exit_true);
           }
-          if (currentBB->exit_false != nullptr &&
-              !currentBB->exit_false->instrs.empty()) {
-            nextInstrs.push_back(&currentBB->exit_false->instrs[0]);
+          if (currentBB->exit_false != nullptr) {
+            visitOrder.push(currentBB->exit_false);
+          }
+          while (!visitOrder.empty()) {
+            BasicBlock *currentVisitedBB = visitOrder.front();
+            visitOrder.pop();
+            bfsBB.insert(currentVisitedBB);
+            if (currentVisitedBB->instrs.size() > 0) {
+              nextInstrs.push_back(&currentVisitedBB->instrs[0]);
+            } else {
+              if (currentVisitedBB->exit_true != nullptr) {
+                visitOrder.push(currentVisitedBB->exit_true);
+              }
+              if (currentVisitedBB->exit_false != nullptr) {
+                visitOrder.push(currentVisitedBB->exit_false);
+              }
+            }
           }
         }
         for (auto &nextInstruction : nextInstrs) {
