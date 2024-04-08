@@ -22,6 +22,12 @@ public:
   visitVar_decl_stmt(ifccParser::Var_decl_stmtContext *ctx) override;
 
   virtual antlrcpp::Any
+  visitArray_decl_stmt(ifccParser::Array_decl_stmtContext *ctx) override;
+
+  virtual antlrcpp::Any
+  visitArray_assign_stmt(ifccParser::Array_assign_stmtContext *ctx) override;
+
+  virtual antlrcpp::Any
   visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) override;
 
   virtual antlrcpp::Any visitPar(ifccParser::ParContext *ctx) override;
@@ -60,7 +66,7 @@ private:
   std::stringstream assembly;
 
   bool addSymbol(antlr4::ParserRuleContext *ctx, const std::string &id,
-                 Type type);
+                 Type type, int arraySize);
 
   std::shared_ptr<Symbol> getSymbol(antlr4::ParserRuleContext *ctx,
                                     const std::string &id);

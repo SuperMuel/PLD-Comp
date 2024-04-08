@@ -5,7 +5,9 @@ axiom : prog EOF ;
 prog : TYPE 'main' '(' ')' '{' stmt* return_stmt '}' ;
 
 stmt : var_decl_stmt
+     | array_decl_stmt
      | var_assign_stmt
+     | array_assign_stmt
      | if_stmt
      | while_stmt
      | block
@@ -13,7 +15,11 @@ stmt : var_decl_stmt
 
 var_decl_stmt : TYPE var_decl_member (',' var_decl_member)* ';';
 var_decl_member: ID ('=' expr)?;
+array_decl_stmt: TYPE ID '[' INTEGER_LITERAL ']' /*('=' '{' expr_list '}')?*/ ';' ;
+expr_list: expr (',' expr)* ;
+
 var_assign_stmt: ID '=' expr ';' ;
+array_assign_stmt: ID '[' expr ']' '=' expr ';' ;
 if_stmt: IF '(' expr ')' block #if
        | IF '(' expr ')' if_block=block ELSE else_block=block #if_else
        ;
@@ -21,8 +27,9 @@ while_stmt: WHILE '(' expr ')' block;
 
 block: '{' stmt* '}';
 
-expr : '(' expr ')' #par
-     |  expr op=('*' | '/' | '%') expr #multdiv
+expr : ID '[' expr ']' #array
+     | '(' expr ')' #par
+     | expr op=('*' | '/' | '%') expr #multdiv
      | expr op=('+' | '-') expr #addsub
      | expr op=('<' | '<=' | '>' | '>=') expr #cmp
      | expr op=('==' | '!=') expr #eq

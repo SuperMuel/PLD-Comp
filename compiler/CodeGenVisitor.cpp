@@ -45,7 +45,7 @@ antlrcpp::Any CodeGenVisitor::visitVar_decl_stmt(ifccParser::Var_decl_stmtContex
     // Iterate over each var_decl_member
     for (auto& memberCtx : ctx->var_decl_member()) {
         std::string varName = memberCtx->ID()->toString();
-        addSymbol(memberCtx, varName, type); // Declare the variable
+        addSymbol(memberCtx, varName, type, 0); // Declare the variable
 
         if (memberCtx->expr()) { // Check for initialization
             std::shared_ptr<Symbol> symbol = getSymbol(memberCtx, varName);
@@ -54,6 +54,49 @@ antlrcpp::Any CodeGenVisitor::visitVar_decl_stmt(ifccParser::Var_decl_stmtContex
         }
     }
 
+    return 0;
+}
+
+antlrcpp::Any CodeGenVisitor::visitArray_decl_stmt(ifccParser::Array_decl_stmtContext* ctx) {
+    Type type;
+    if (ctx->TYPE()->toString() == "int") {
+        type = Type::INT;
+    } else if (ctx->TYPE()->toString() == "char") {
+        type = Type::CHAR;
+    }
+    
+    std::string arrayName = ctx->ID()->toString();
+    int arraySize = stoi(ctx->INTEGER_LITERAL()->toString());
+
+    addSymbol(ctx, arrayName, type, arraySize); // This should somehow mark the symbol as an array type with its size
+    std::shared_ptr<Symbol> symbol = getSymbol(ctx, arrayName);
+    
+    //  handle initialization here similarly to visitVar_decl_stmt, but for each element
+    /*if (ctx->expr_list()) {
+        int i = 0;
+        for (auto& expr : ctx->expr_list()->expr()) {
+            std::shared_ptr<Symbol> symbol = getSymbol(ctx, arrayName);
+            std::shared_ptr<Symbol> source = visit(expr).as<std::shared_ptr<Symbol>>();
+            cfg.current_bb->add_IRInstr(IRInstr::array_assign, Type::INT, {symbol, source, cfg.current_bb->add_IRInstr(IRInstr::ldconst, Type::INT, {std::to_string(i)})});
+            i++;
+        }
+    }*/
+    cfg.current_bb->add_IRInstr(IRInstr::array_decl, Type::INT, {symbol});
+
+    return 0;
+}
+
+// Array affectation
+antlrcpp::Any CodeGenVisitor::visitArray_assign_stmt(ifccParser::Array_assign_stmtContext* ctx) {
+    std::shared_ptr<Symbol> symbol = getSymbol(ctx, ctx->ID()->toString());
+    if (symbol == nullptr) {
+        return 1;
+    }
+
+    std::shared_ptr<Symbol> index = visit(ctx->expr(0)).as<std::shared_ptr<Symbol>>();
+    std::shared_ptr<Symbol> source = visit(ctx->expr(1)).as<std::shared_ptr<Symbol>>();
+
+    //cfg.current_bb->add_IRInstr(IRInstr::array_assign, Type::INT, {symbol, source, index});
     return 0;
 }
 
@@ -265,8 +308,8 @@ antlrcpp::Any CodeGenVisitor::visitVal(ifccParser::ValContext *ctx) {
 }
 
 bool CodeGenVisitor::addSymbol(antlr4::ParserRuleContext *ctx,
-                               const std::string &id, Type type) {
-  bool result = cfg.add_symbol(id, type, ctx->getStart()->getLine());
+                               const std::string &id, Type type, int arraySize) {
+  bool result = cfg.add_symbol(id, type, ctx->getStart()->getLine(), arraySize);
   if (!result) {
     std::string error = "The variable " + id + " has already been declared";
     VisitorErrorListener::addError(ctx, error, ErrorType::Error);

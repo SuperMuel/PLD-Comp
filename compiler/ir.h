@@ -48,6 +48,7 @@ public:
     gt,
     eq,
     neq,
+    array_alloc,
   } Operation;
 
   /**  constructor */
@@ -72,6 +73,7 @@ private:
   void handleVar_assign(std::ostream &os, CFG *cfg);
   void handleLdconst(std::ostream &os, CFG *cfg);
   void handleLdvar(std::ostream &os, CFG *cfg);
+  void handleArrayAlloc(std::ostream &os, CFG *cfg);
 
   void handleBinaryOp(const std::string &op, std::ostream &os, CFG *cfg);
   void handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg);
@@ -134,7 +136,7 @@ public:
   inline void push_table() { symbolTables.push_front(SymbolTable()); }
   void pop_table();
 
-  bool add_symbol(std::string id, Type t, int line);
+  bool add_symbol(std::string id, Type t, int line, int arraySize);
   std::shared_ptr<Symbol> get_symbol(const std::string &name);
 
   // Index of the free register with smallest index
