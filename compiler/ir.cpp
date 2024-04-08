@@ -81,6 +81,9 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
   case ldvar:
     handleLdvar(os, cfg);
     break;
+  case array_alloc:
+    handleArrayAlloc(os, cfg);
+    break;
   }
 }
 
@@ -157,6 +160,9 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
   case IRInstr::cmpNZ:
     os << instruction.params[0] << " !=  0";
     break;
+  case IRInstr::array_alloc:
+    os << "array_alloc " << instruction.params[0];
+    break;
   }
   return os;
 }
@@ -221,6 +227,11 @@ void IRInstr::handleLdvar(std::ostream &os, CFG *cfg) {
   os << instr << " -" << symbol->offset << "(%rbp), %"
      << registers32[cfg->freeRegister] << std::endl;
   cfg->freeRegister++;
+}
+
+void IRInstr::handleArrayAlloc(std::ostream &os, CFG *cfg) {
+  auto symbol = std::get<std::shared_ptr<Symbol>>(params[0]);
+  os << "subq $" << getSize(symbol->type) * symbol->arraySize<< ;
 }
 
 void IRInstr::handleBinaryOp(const std::string &op, std::ostream &os,
@@ -289,7 +300,8 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::neq:
   case IRInstr::ldvar:
   case IRInstr::cmpNZ:
-  case IRInstr::ldconst: {
+  case IRInstr::ldconst:
+  case IRInstr::array_alloc: {
     std::shared_ptr<Symbol> symbol = cfg->create_new_tempvar(t);
     params.push_back(symbol);
     instrs.emplace_back(this, op, t, params);
@@ -361,7 +373,7 @@ void CFG::pop_table() {
   symbolTables.pop_front();
 }
 
-bool CFG::add_symbol(std::string id, Type t, int line) {
+/*bool CFG::add_symbol(std::string id, Type t, int line) {
   if (symbolTables.front().count(id)) {
     return false;
   }
@@ -373,6 +385,37 @@ bool CFG::add_symbol(std::string id, Type t, int line) {
   symbolTables.front()[id] = newSymbol;
 
   return true;
+}*/
+
+bool CFG::add_symbol(std::string id, Type t, int line, int arraySize) {
+    if (symbolTables.front().count(id)) {
+        return false; // Symbol already exists in the current scope
+    }
+
+    std::shared_ptr<Symbol> newSymbol;
+    if (arraySize > 0) {
+        // If arraySize is greater than 0, then it's an array
+        newSymbol = std::make_shared<Symbol>(t, id, arraySize, line);
+    } else {
+        // Otherwise, it's a regular variable
+        newSymbol = std::make_shared<Symbol>(t, id, line);
+    }
+
+    unsigned int size = getSize(t);
+    if (arraySize > 0) {
+        // For arrays, allocate space based on the type size multiplied by the number of elements
+        size *= arraySize;
+    }
+
+    // Allocate memory on the stack by adjusting the symbol's offset
+    // Assuming your stack grows downwards, each new symbol's offset is the
+    // sum of the sizes of all previously declared symbols
+    newSymbol->offset = (nextFreeSymbolIndex + 2 * (size - 1)) / size * size;
+    nextFreeSymbolIndex += size; // Update this to reflect the total size of the new symbol
+
+    symbolTables.front()[id] = newSymbol; // Add the new symbol to the current symbol table
+
+    return true;
 }
 
 std::shared_ptr<Symbol> CFG::get_symbol(const std::string &name) {
@@ -389,7 +432,7 @@ std::shared_ptr<Symbol> CFG::get_symbol(const std::string &name) {
 
 std::shared_ptr<Symbol> CFG::create_new_tempvar(Type t) {
   std::string tempVarName = "!T" + std::to_string(nextFreeSymbolIndex);
-  if (add_symbol(tempVarName, t, 0)) {
+  if (add_symbol(tempVarName, t, 0, 0)) {
     std::shared_ptr<Symbol> symbol = get_symbol(tempVarName);
     symbol->used = true;
     return symbol;
