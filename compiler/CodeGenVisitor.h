@@ -53,6 +53,8 @@ public:
 
   virtual antlrcpp::Any visitB_xor(ifccParser::B_xorContext *ctx) override;
 
+  virtual antlrcpp::Any visitUnaryOp(ifccParser::UnaryOpContext *ctx) override;
+
 private:
   // Keeps track of the label for the next jump
   int nextLabel = 1;

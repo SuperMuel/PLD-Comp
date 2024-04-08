@@ -317,3 +317,31 @@ antlrcpp::Any CodeGenVisitor::visitB_xor(ifccParser::B_xorContext *ctx) {
   return cfg.current_bb->add_IRInstr(IRInstr::b_xor, Type::INT,
                                      {leftVal, rightVal});
 }
+
+antlrcpp::Any CodeGenVisitor::visitUnaryOp(ifccParser::UnaryOpContext *ctx) {
+    std::shared_ptr<Symbol> val = visit(ctx->expr()).as<std::shared_ptr<Symbol>>();
+    IRInstr::Operation instr;
+    if (ctx->op->getText() == "-") {
+        instr = IRInstr::neg;
+        cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
+        return val;
+    } else if (ctx->op->getText() == "~") {
+        instr = IRInstr::not_;
+        cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
+        return val;
+    } else if (ctx->op->getText() == "!") {
+        instr = IRInstr::lnot;
+        cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
+        return val;
+    } else if (ctx->op->getText() == "++") {
+        instr = IRInstr::inc;
+        cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
+        return val;
+    } else if(ctx->op->getText() == "--") {
+        instr = IRInstr::dec;
+        cfg.current_bb->add_IRInstr(instr, Type::INT, {val});
+        return val;
+    } else if (ctx->op->getText() == "+") {
+        return val;
+    }
+}

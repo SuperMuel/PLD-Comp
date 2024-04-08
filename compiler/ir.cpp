@@ -81,6 +81,23 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
   case ldvar:
     handleLdvar(os, cfg);
     break;
+  case neg:
+    handleUnaryOp("neg", os, cfg);
+    break;
+  case not_:
+    handleUnaryOp("not_", os, cfg);
+    break;
+  case lnot:
+    handleUnaryOp("lnot", os, cfg);
+    break;
+  case inc:
+    handleUnaryOp("inc", os, cfg);
+    break;
+  case dec:
+    handleUnaryOp("dec", os, cfg);
+    break;
+  case nothing:
+    break;
   }
 }
 
@@ -156,6 +173,23 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
     break;
   case IRInstr::cmpNZ:
     os << instruction.params[0] << " !=  0";
+    break;
+  case IRInstr::neg:
+    os << " - " << instruction.params[0];
+    break;
+  case IRInstr::not_:
+    os << " ~ " << instruction.params[0];
+    break;
+  case IRInstr::lnot:
+    os << "! " << instruction.params[0];
+    break;
+  case IRInstr::inc:
+    os << "++" << instruction.params[0];
+    break;
+  case IRInstr::dec:
+    os << "--" << instruction.params[0];
+    break;
+  case IRInstr::nothing:
     break;
   }
   return os;
@@ -241,6 +275,36 @@ void IRInstr::handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg) {
   cfg->freeRegister++;
 }
 
+void IRInstr::handleUnaryOp(const std::string &op, std::ostream &os, CFG *cfg) {
+  auto symbol = std::get<std::shared_ptr<Symbol>>(params[0]);
+  if (op == "neg") {
+    os << "negl %" << registers32[cfg->freeRegister - 1] << std::endl;
+    os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+        << symbol->offset << "(%rbp)" << std::endl;
+  } else if (op=="not_"){
+    os << "notl %" << registers32[cfg->freeRegister - 1] << std::endl;
+    os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+        << symbol->offset << "(%rbp)" << std::endl;
+  } else if (op=="lnot"){
+    os << "cmpl $0, %" << registers32[cfg->freeRegister - 1] << std::endl;
+    os << "sete %" << registers8[cfg->freeRegister - 1] << std::endl;
+    os << "movzbl %" << registers8[cfg->freeRegister - 1] << ", %"
+       << registers32[cfg->freeRegister - 1] << std::endl;
+    os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+       << symbol->offset << "(%rbp)" << std::endl;
+  } else if (op == "inc"){
+    os << "incl %" << registers32[cfg->freeRegister - 1] << std::endl;
+    os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+      << symbol->offset << "(%rbp)" << std::endl;
+  } else if (op == "dec"){
+    os << "decl %" << registers32[cfg->freeRegister - 1] << std::endl;
+    os << "movl %" << registers32[cfg->freeRegister - 1] << ", -"
+      << symbol->offset << "(%rbp)" << std::endl;
+  } else {
+    assert("Invalid unary operation");
+  }
+}
+
 BasicBlock::BasicBlock(CFG *cfg, std::string entry_label)
     : cfg(cfg), label(std::move(entry_label)), exit_true(nullptr),
       exit_false(nullptr), visited(false) {}
@@ -289,7 +353,14 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::neq:
   case IRInstr::ldvar:
   case IRInstr::cmpNZ:
-  case IRInstr::ldconst: {
+  case IRInstr::ldconst: 
+  case IRInstr::not_:
+  case IRInstr::neg:  
+  case IRInstr::lnot:
+  case IRInstr::inc:
+  case IRInstr::dec:
+  case IRInstr::nothing:
+  {
     std::shared_ptr<Symbol> symbol = cfg->create_new_tempvar(t);
     params.push_back(symbol);
     instrs.emplace_back(this, op, t, params);
