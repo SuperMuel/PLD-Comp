@@ -197,7 +197,8 @@ std::set<std::shared_ptr<Symbol>> IRInstr::getDeclaredVariable() {
     break;
   case IRInstr::call:
     if (outType != Type::VOID) {
-      result.insert(std::get<std::shared_ptr<Symbol>>(params[1]));
+      result.insert(
+          std::get<std::shared_ptr<Symbol>>(params[params.size() - 1]));
     }
     break;
   case IRInstr::ret:
@@ -407,7 +408,7 @@ void IRInstr::handleVar_assign(std::ostream &os, CFG *cfg) {
   int sourceRegister =
       cfg->findRegister(std::get<std::shared_ptr<Symbol>>(params[1]));
   auto symbol = std::get<std::shared_ptr<Symbol>>(params[0]);
-  std::string instr = (symbol->type == Type::CHAR ? "movb" : "movl");
+  std::string instr = (symbol->type == Type::CHAR ? "movb " : "movl ");
   const std::string *registers =
       (symbol->type == Type::CHAR ? registers8 : registers32);
 
@@ -417,7 +418,7 @@ void IRInstr::handleVar_assign(std::ostream &os, CFG *cfg) {
   }
 
   if (sourceRegister != destRegister) {
-    os << instr << " %" << registers[sourceRegister] << ", %"
+    os << instr << "%" << registers[sourceRegister] << ", %"
        << registers[destRegister] << "\n";
   }
   if (destRegister == cfg->scratchRegister) {
@@ -434,7 +435,7 @@ void IRInstr::handleLdconst(std::ostream &os, CFG *cfg) {
   const std::string *registers =
       (symbol->type == Type::CHAR ? registers8 : registers32);
 
-  os << instr << " $" << val << ", %" << registers[destRegister] << std::endl;
+  os << "movl $" << val << ", %" << registers32[destRegister] << std::endl;
   if (destRegister == cfg->scratchRegister) {
     os << "movl %" << registers32[destRegister] << ", -"
        << std::get<std::shared_ptr<Symbol>>(params[1])->offset << "(%rbp)"
@@ -539,7 +540,7 @@ void IRInstr::handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg) {
   }
 
   if (destRegister == cfg->scratchRegister) {
-    os << "movl " << registers32[destRegister] << ", -"
+    os << "movl %" << registers32[destRegister] << ", -"
        << std::get<std::shared_ptr<Symbol>>(params[2])->offset << "(%rbp)";
   }
 }
@@ -563,14 +564,14 @@ void IRInstr::handleUnaryOp(const std::string &op, std::ostream &os, CFG *cfg) {
     }
     os << op << " %" << registers32[varRegister] << "\n";
     if (varRegister == cfg->scratchRegister) {
-      os << "movl " << registers32[varRegister] << ", -" << symbol->offset
+      os << "movl %" << registers32[varRegister] << ", -" << symbol->offset
          << "(%rbp)" << std::endl;
     }
   } else {
     os << "cmpl $0, %" << registers32[varRegister] << std::endl;
     int varRegister = cfg->findRegister(symbol);
     if (varRegister == cfg->scratchRegister) {
-      os << "movl " << registers32[varRegister] << ", -" << symbol->offset
+      os << "movl %" << registers32[varRegister] << ", -" << symbol->offset
          << "(%rbp)"
          << "\n";
     }
@@ -595,16 +596,27 @@ void IRInstr::handleCall(std::ostream &os, CFG *cfg) {
   CFG *function = cfg->get_visitor()->getFunction(funcName);
   int paramNum = function->get_parameters_type().size();
 
-  if (paramNum > 4) {
-    os << "subq $" << (cfg->nextFreeSymbolIndex + 15) / 16 * 16 << ", %rsp"
-       << std::endl;
-    os << "pushq %r8" << std::endl;
-    if (paramNum > 5) {
-      os << "pushq %r9" << std::endl;
-    }
+  int val = (cfg->nextFreeSymbolIndex + 16 - 1) / 16 * 16;
+  if (val) {
+    os << "subq $" << val << ", %rsp" << std::endl;
+  }
+  for (int i = 0; i < 8; i++) {
+    os << "pushq %" << registers64[i] << std::endl;
   }
 
+  bool exchange = false;
+  if (paramNum >= 6) {
+    auto symbol8 = std::get<std::shared_ptr<Symbol>>(params[5]);
+    auto symbol9 = std::get<std::shared_ptr<Symbol>>(params[6]);
+    if (cfg->findRegister(symbol8) == 1 && cfg->findRegister(symbol9) == 0) {
+      os << "xchg %r8d, %r9d" << std::endl;
+      exchange = true;
+    }
+  }
   for (int i = paramNum - 1; i >= 0; i--) {
+    if ((i == 4 || i == 5) && exchange) {
+      continue;
+    }
     auto symbol = std::get<std::shared_ptr<Symbol>>(params[i + 1]);
     int paramRegister = cfg->findRegister(symbol);
     if (paramRegister == cfg->scratchRegister) {
@@ -624,27 +636,25 @@ void IRInstr::handleCall(std::ostream &os, CFG *cfg) {
   os << "call " << funcName << std::endl;
   int paramRegister = cfg->findRegister(returnVar);
 
+  for (int i = 0; i < 8; i++) {
+    os << "popq %" << registers64[7 - i] << std::endl;
+  }
+
+  for (int i = 7; i <= paramNum; i++) {
+    os << "popq %" << registers64[cfg->scratchRegister] << std::endl;
+  }
+  if (val) {
+    os << "addq $" << val << ", %rsp" << std::endl;
+  }
+
   if (outType != Type::VOID) {
     os << "movl %eax, %" << registers32[paramRegister] << std::endl;
     os << "movl %" << registers32[paramRegister] << ", -" << returnVar->offset
        << "(%rbp)" << std::endl;
   }
 
-  for (int i = 7; i <= paramNum; i++) {
-    os << "popq %" << registers64[cfg->scratchRegister] << std::endl;
-  }
-  if (paramNum > 4) {
-    if (paramNum > 5) {
-      os << "popq %r9" << std::endl;
-    }
-    os << "popq %r8" << std::endl;
-    os << "addq $" << (cfg->nextFreeSymbolIndex + 15) / 16 * 16 << ", %rsp"
-       << std::endl;
-  }
-
   if (outType != Type::VOID && paramRegister != cfg->scratchRegister) {
-    os << "movl "
-       << "-" << returnVar->offset << "(%rbp)"
+    os << "movl -" << returnVar->offset << "(%rbp)"
        << ", %" << registers32[paramRegister] << std::endl;
   }
 }
