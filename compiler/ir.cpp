@@ -83,7 +83,7 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
     handleUnaryOp("neg", os, cfg);
     break;
   case not_:
-    handleUnaryOp("not_", os, cfg);
+    handleUnaryOp("notl", os, cfg);
     break;
   case lnot:
     handleUnaryOp("lnot", os, cfg);
@@ -422,8 +422,8 @@ void IRInstr::handleVar_assign(std::ostream &os, CFG *cfg) {
        << registers[destRegister] << "\n";
   }
   if (destRegister == cfg->scratchRegister) {
-    os << "movl -" << std::get<std::shared_ptr<Symbol>>(params[0])->offset
-       << "(%rbp), %" << registers32[destRegister] << std::endl;
+    os << "movl %" << registers32[destRegister] << ", -" << symbol->offset
+       << "(%rbp)" << std::endl;
   }
 }
 
@@ -557,7 +557,7 @@ void IRInstr::handleUnaryOp(const std::string &op, std::ostream &os, CFG *cfg) {
   auto symbol = std::get<std::shared_ptr<Symbol>>(params[0]);
   int varRegister = cfg->findRegister(symbol);
 
-  if (op != "lnot") {
+  if (op == "inc" || op == "dec") {
     if (varRegister == cfg->scratchRegister) {
       os << "movl -" << symbol->offset << "(%rbp), %"
          << registers32[varRegister] << std::endl;
@@ -567,7 +567,26 @@ void IRInstr::handleUnaryOp(const std::string &op, std::ostream &os, CFG *cfg) {
       os << "movl %" << registers32[varRegister] << ", -" << symbol->offset
          << "(%rbp)" << std::endl;
     }
-  } else {
+  }
+  if (op == "neg" || op == "notl") {
+    if (varRegister == cfg->scratchRegister) {
+      os << "movl -" << symbol->offset << "(%rbp), %"
+         << registers32[varRegister] << std::endl;
+    } else {
+      os << "movl %" << registers32[varRegister] << ", %"
+         << registers32[cfg->scratchRegister] << std::endl;
+    }
+    os << op << " %" << registers32[cfg->scratchRegister] << "\n";
+    auto destSymbol = std::get<std::shared_ptr<Symbol>>(params[1]);
+    int destRegister = cfg->findRegister(destSymbol);
+    if (destRegister == cfg->scratchRegister) {
+      os << "movl " << registers32[cfg->scratchRegister] << ", -"
+         << destSymbol->offset << "(%rbp)" << std::endl;
+    } else {
+      os << "movl %" << registers32[cfg->scratchRegister] << ", %"
+         << registers32[destRegister] << std::endl;
+    }
+  } else if (op == "lnot") {
     os << "cmpl $0, %" << registers32[varRegister] << std::endl;
     int varRegister = cfg->findRegister(symbol);
     if (varRegister == cfg->scratchRegister) {
@@ -710,6 +729,8 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::eq:
   case IRInstr::neq:
   case IRInstr::cmpNZ:
+  case IRInstr::neg:
+  case IRInstr::not_:
   case IRInstr::ldconst:
   case IRInstr::lnot: {
     std::shared_ptr<Symbol> symbol = cfg->create_new_tempvar(t);
@@ -735,8 +756,6 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
     instrs.emplace_back(this, op, t, params);
     break;
   }
-  case IRInstr::not_:
-  case IRInstr::neg:
   case IRInstr::inc:
   case IRInstr::dec:
     instrs.emplace_back(this, op, t, params);
