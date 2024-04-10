@@ -4,7 +4,6 @@
 #include <sstream>
 
 #include "antlr4-runtime.h"
-#include "generated/ifccBaseVisitor.h"
 #include "generated/ifccLexer.h"
 #include "generated/ifccParser.h"
 
@@ -37,7 +36,8 @@ int main(int argn, const char **argv) {
   ifccParser parser(&tokens);
   tree::ParseTree *tree = parser.axiom();
 
-  if (parser.getNumberOfSyntaxErrors() != 0) {
+  if (lexer.getNumberOfSyntaxErrors() != 0 ||
+      parser.getNumberOfSyntaxErrors() != 0) {
     cerr << "error: syntax error during parsing" << endl;
     exit(1);
   }
@@ -45,13 +45,19 @@ int main(int argn, const char **argv) {
   CodeGenVisitor v;
   v.visit(tree);
 
-  CFG *const cfg = v.getCfg();
-  /*for (auto block : cfg->getBlocks()) {
-    for (auto instr : block->instrs) {
-      std::cerr << instr << std::endl;
+  auto cfgList = v.getCfgList();
+  for (auto cfg : cfgList) {
+    if (cfg->get_name() == "putchar" || cfg->get_name() == "getchar") {
+      continue;
     }
-  }/*/
-  cfg->gen_asm(std::cout);
+    cfg->gen_asm(std::cout);
+    std::cerr << cfg->get_name() << std::endl;
+    for (auto block : cfg->getBlocks()) {
+      for (auto instr : block->instrs) {
+        std::cerr << instr << std::endl;
+      }
+    }
+  }
 
   return 0;
 }
