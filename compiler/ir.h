@@ -48,7 +48,8 @@ public:
     gt,
     eq,
     neq,
-    array_alloc,
+    ldarray,
+    rdarray,
   } Operation;
 
   /**  constructor */
@@ -73,7 +74,8 @@ private:
   void handleVar_assign(std::ostream &os, CFG *cfg);
   void handleLdconst(std::ostream &os, CFG *cfg);
   void handleLdvar(std::ostream &os, CFG *cfg);
-  void handleArrayAlloc(std::ostream &os, CFG *cfg);
+  void handleLdarray(std::ostream &os, CFG *cfg);
+  void handleRdarray(std::ostream &os, CFG *cfg);
 
   void handleBinaryOp(const std::string &op, std::ostream &os, CFG *cfg);
   void handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg);

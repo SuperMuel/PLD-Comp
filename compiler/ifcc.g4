@@ -19,7 +19,7 @@ array_decl_stmt: TYPE ID '[' INTEGER_LITERAL ']' /*('=' '{' expr_list '}')?*/ ';
 expr_list: expr (',' expr)* ;
 
 var_assign_stmt: ID '=' expr ';' ;
-array_assign_stmt: ID '[' expr ']' '=' expr ';' ;
+array_assign_stmt: ID '[' INTEGER_LITERAL ']' '=' expr ';' ;
 if_stmt: IF '(' expr ')' block #if
        | IF '(' expr ')' if_block=block ELSE else_block=block #if_else
        ;
@@ -27,7 +27,7 @@ while_stmt: WHILE '(' expr ')' block;
 
 block: '{' stmt* '}';
 
-expr : ID '[' expr ']' #array
+expr : ID '[' INTEGER_LITERAL ']' #array
      | '(' expr ')' #par
      | expr op=('*' | '/' | '%') expr #multdiv
      | expr op=('+' | '-') expr #addsub

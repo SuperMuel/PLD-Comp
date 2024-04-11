@@ -26,6 +26,9 @@ public:
 
   virtual antlrcpp::Any
   visitArray_assign_stmt(ifccParser::Array_assign_stmtContext *ctx) override;
+  
+  virtual antlrcpp::Any
+  visitArray(ifccParser::ArrayContext *ctx) override;
 
   virtual antlrcpp::Any
   visitVar_assign_stmt(ifccParser::Var_assign_stmtContext *ctx) override;

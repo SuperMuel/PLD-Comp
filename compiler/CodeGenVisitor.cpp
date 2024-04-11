@@ -69,7 +69,7 @@ antlrcpp::Any CodeGenVisitor::visitArray_decl_stmt(ifccParser::Array_decl_stmtCo
     int arraySize = stoi(ctx->INTEGER_LITERAL()->toString());
 
     addSymbol(ctx, arrayName, type, arraySize); // This should somehow mark the symbol as an array type with its size
-    std::shared_ptr<Symbol> symbol = getSymbol(ctx, arrayName);
+    //std::shared_ptr<Symbol> symbol = getSymbol(ctx, arrayName);
     
     //  handle initialization here similarly to visitVar_decl_stmt, but for each element
     /*if (ctx->expr_list()) {
@@ -81,23 +81,36 @@ antlrcpp::Any CodeGenVisitor::visitArray_decl_stmt(ifccParser::Array_decl_stmtCo
             i++;
         }
     }*/
-    cfg.current_bb->add_IRInstr(IRInstr::array_decl, Type::INT, {symbol});
+    //cfg.current_bb->add_IRInstr(IRInstr::array_decl, Type::INT, {symbol});
 
     return 0;
 }
 
 // Array affectation
 antlrcpp::Any CodeGenVisitor::visitArray_assign_stmt(ifccParser::Array_assign_stmtContext* ctx) {
+    std::shared_ptr<Symbol> array = getSymbol(ctx, ctx->ID()->toString());
+    if (array == nullptr) {
+        return 1;
+    }
+    // string
+
+    std::string index = ctx->INTEGER_LITERAL()->toString();
+    std::shared_ptr<Symbol> source = visit(ctx->expr()).as<std::shared_ptr<Symbol>>();
+
+    cfg.current_bb->add_IRInstr(IRInstr::rdarray, Type::INT, {array, source, index});
+    return 0;
+}
+
+// Array access
+antlrcpp::Any CodeGenVisitor::visitArray(ifccParser::ArrayContext* ctx) {
     std::shared_ptr<Symbol> symbol = getSymbol(ctx, ctx->ID()->toString());
     if (symbol == nullptr) {
         return 1;
     }
 
-    std::shared_ptr<Symbol> index = visit(ctx->expr(0)).as<std::shared_ptr<Symbol>>();
-    std::shared_ptr<Symbol> source = visit(ctx->expr(1)).as<std::shared_ptr<Symbol>>();
-
-    //cfg.current_bb->add_IRInstr(IRInstr::array_assign, Type::INT, {symbol, source, index});
-    return 0;
+    std::string index = ctx->INTEGER_LITERAL()->toString();
+    std::shared_ptr<Symbol> source = cfg.current_bb->add_IRInstr(IRInstr::ldarray, Type::INT, {symbol, index});
+    return source;
 }
 
 antlrcpp::Any

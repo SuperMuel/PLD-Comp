@@ -81,8 +81,11 @@ void IRInstr::genAsm(std::ostream &os, CFG *cfg) {
   case ldvar:
     handleLdvar(os, cfg);
     break;
-  case array_alloc:
-    handleArrayAlloc(os, cfg);
+  case ldarray:
+    handleLdarray(os, cfg);
+    break;
+  case rdarray:
+    handleRdarray(os, cfg);
     break;
   }
 }
@@ -160,8 +163,11 @@ std::ostream &operator<<(std::ostream &os, IRInstr &instruction) {
   case IRInstr::cmpNZ:
     os << instruction.params[0] << " !=  0";
     break;
-  case IRInstr::array_alloc:
-    os << "array_alloc " << instruction.params[0];
+  case IRInstr::ldarray:
+  os << instruction.params[1] << " = " << instruction.params[0] << "[" << instruction.params[2] << "]";
+  break;
+  case IRInstr::rdarray:
+    os << instruction.params[2] << " = " << instruction.params[0] << "[" << instruction.params[1] << "]";
     break;
   }
   return os;
@@ -229,11 +235,7 @@ void IRInstr::handleLdvar(std::ostream &os, CFG *cfg) {
   cfg->freeRegister++;
 }
 
-void IRInstr::handleArrayAlloc(std::ostream &os, CFG *cfg) {
-  auto symbol = std::get<std::shared_ptr<Symbol>>(params[0]);
-  os << "subq $" << getSize(symbol->type) * symbol->arraySize
-     << ", %rsp\n";
-}
+
 
 void IRInstr::handleBinaryOp(const std::string &op, std::ostream &os,
                              CFG *cfg) {
@@ -251,6 +253,38 @@ void IRInstr::handleCmpOp(const std::string &op, std::ostream &os, CFG *cfg) {
   os << "movzbl %" << registers8[cfg->freeRegister] << ", %"
      << registers32[cfg->freeRegister] << std::endl;
   cfg->freeRegister++;
+}
+
+void IRInstr::handleLdarray(std::ostream &os, CFG *cfg) {
+  auto array = std::get<std::shared_ptr<Symbol>>(params[0]);
+  auto index = std::get<std::string>(params[1]);
+  std::string instr = (array->type == Type::CHAR ? "movb" : "movl");
+
+  // Calculate the address of the element in the array
+  auto offset = array->offset + stoi(index) * getSize(array->type);
+
+  // Load the value from the array
+  os << instr << " -" << offset << "(%rbp), %"
+     << registers32[cfg->freeRegister] << std::endl;
+  cfg->freeRegister++;
+
+}
+
+// Handle affectation of a value to an array cfg.current_bb->add_IRInstr(IRInstr::rdarray, Type::INT, {symbol, source, index});
+void IRInstr::handleRdarray(std::ostream &os, CFG *cfg) {
+  auto source = std::get<std::shared_ptr<Symbol>>(params[1]); // Value to be stored in the array
+  auto array = std::get<std::shared_ptr<Symbol>>(params[0]);
+  auto index = std::get<std::string>(params[2]);
+  std::string instr = (source->type == Type::CHAR ? "movb" : "movl");
+
+  // Calculate the address of the element in the array
+  auto offset = array->offset + stoi(index) * getSize(source->type);
+
+  // Store the value in the array
+  os << instr << " %" << registers32[cfg->freeRegister - 1] << ", -"
+     << offset << "(%rbp)" << std::endl; 
+  cfg->freeRegister--;
+
 }
 
 BasicBlock::BasicBlock(CFG *cfg, std::string entry_label)
@@ -302,7 +336,7 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
   case IRInstr::ldvar:
   case IRInstr::cmpNZ:
   case IRInstr::ldconst:
-  case IRInstr::array_alloc: {
+  case IRInstr::ldarray: {
     std::shared_ptr<Symbol> symbol = cfg->create_new_tempvar(t);
     params.push_back(symbol);
     instrs.emplace_back(this, op, t, params);
@@ -310,7 +344,8 @@ std::shared_ptr<Symbol> BasicBlock::add_IRInstr(IRInstr::Operation op, Type t,
     break;
   }
   case IRInstr::ret:
-  case IRInstr::var_assign: {
+  case IRInstr::var_assign:
+  case IRInstr::rdarray:{
     instrs.emplace_back(this, op, t, params);
     break;
   }
