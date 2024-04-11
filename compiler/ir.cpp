@@ -418,11 +418,11 @@ void IRInstr::handleVar_assign(std::ostream &os, CFG *cfg) {
   }
 
   if (sourceRegister != destRegister) {
-    os << instr << "%" << registers[sourceRegister] << ", %"
-       << registers[destRegister] << "\n";
+    os << "movl %" << registers32[sourceRegister] << ", %"
+       << registers32[destRegister] << "\n";
   }
   if (destRegister == cfg->scratchRegister) {
-    os << "movl %" << registers32[destRegister] << ", -" << symbol->offset
+    os << instr << " %" << registers32[destRegister] << ", -" << symbol->offset
        << "(%rbp)" << std::endl;
   }
 }
